@@ -41,20 +41,24 @@ draw.rectangle((0, 12, 123, 95), fill='white')
 # Step 2: Inner black metric area (122x72, top)
 draw.rectangle((1, 13, 122, 86), fill='black')  # up to y=84
 
-# Step 3: Bottom white IP bar (122x10)
+# Step 3: White horizontal line in the middle of the metric area
+line_y = 13 + (72 // 2)
+draw.line((1, line_y, 122, line_y), fill='white')
+
+# Step 4: Bottom white IP bar (122x10)
 draw.rectangle((1, 87, 122, 94), fill='white')  # 10px height
 
-# Step 4: Text in black metric area
+# Step 5: Text in upper half of black metric area
 font = ImageFont.load_default()
 text = "Please wait..."
 bbox = draw.textbbox((0, 0), text, font=font)
 tw = bbox[2] - bbox[0]
 th = bbox[3] - bbox[1]
 text_x = 1 + ((122 - tw) // 2)
-text_y = 13 + ((72 - th) // 2)
+text_y = 13 + ((36 - th) // 2)
 draw.text((text_x, text_y), text, fill='white', font=font)
 
-# Step 5: Draw IP in white bar (in black text)
+# Step 6: Draw IP in white bar (in black text)
 ip = get_ip()
 ip_text_y = 85 + 1  # slight top padding
 draw.text((2, ip_text_y), ip, fill='black', font=font)
