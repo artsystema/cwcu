@@ -61,7 +61,7 @@ def draw_frame(shrink):
     # Step 5: Four metric rectangles arranged 2x2 with animated icons and placeholder text
     spacing = 1
     rect_width = (124 - spacing) // 2
-    rect_height = ((line_y - 13) - spacing) // 2
+    rect_height = ((line_y - 10) - spacing) // 2
     icon_base = rect_height - 4  # max icon size
     text_bbox = font.getbbox("No")
     text_h = text_bbox[3] - text_bbox[1]
