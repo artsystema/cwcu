@@ -78,7 +78,7 @@ def draw_frame(shrink):
 
     # Step 6: Draw IP in white bar (in black text)
     ip = get_ip()
-    ip_text_y = 87 + 1  # slight top padding
+    ip_text_y = 85 + 1  # slight top padding
     draw.text((2, ip_text_y), ip, fill='black', font=font)
 
     disp.ShowImage(disp.getbuffer(img))
