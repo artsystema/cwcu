@@ -71,7 +71,7 @@ def draw_frame(shrink):
         col = i % 2
         left = 0 + col * (rect_width + spacing) + col * 2
         top = 12 + row * (rect_height + spacing)
-        right = left + rect_width - 2
+        right = left + rect_width - 2 * col
         bottom = top + rect_height - 1
         draw.rectangle((left, top, right, bottom), fill='white')
 
