@@ -36,11 +36,11 @@ disp.clear()
 
 font = ImageFont.load_default()
 
-# Load all frames
+"""Load fan animation frames from the pic directory."""
 fan_frames = [Image.open(f).convert("RGB") for f in sorted(glob.glob("pic/fan_*.png"))]
-fan_icon = Image.open("pic/fan_0.png").convert("RGB")
 
-def draw_frame(shrink):
+
+def draw_frame(shrink, fan_frame):
     """Render a single frame on the OLED display."""
     img = Image.new('RGB', (disp.width, disp.height), 'black')
     draw = ImageDraw.Draw(img)
@@ -94,8 +94,8 @@ def draw_frame(shrink):
         draw.text((text_x, text_y), "No", fill='black', font=font)
         draw.text((text_x, text_y + 7), "Signal", fill='black', font=font)
 
-    # Step 5.1: Draw fan Icon
-    img.paste(fan_icon, (1, 14))
+    # Step 5.1: Draw fan Icon (animated)
+    img.paste(fan_frame, (1, 14))
     
     # Step 6: Draw IP in white bar (in black text)
     ip = get_ip()
@@ -107,10 +107,12 @@ def draw_frame(shrink):
 
 def main():
     shrink = False
+    frame_idx = 0
     while True:
-        draw_frame(shrink)
+        draw_frame(shrink, fan_frames[frame_idx])
         shrink = not shrink
-        time.sleep(0.5)
+        frame_idx = (frame_idx + 1) % len(fan_frames)
+        time.sleep(1 / 3)
 
 
 if __name__ == "__main__":
