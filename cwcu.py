@@ -7,7 +7,7 @@ import os
 import time
 import socket
 from PIL import Image, ImageDraw, ImageFont
-from waveshare_OLED import config
+
 
 # Set up Waveshare library path
 libdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../OLED_Module_Code/RaspberryPi/python/lib')
@@ -15,7 +15,7 @@ if os.path.exists(libdir):
     sys.path.append(libdir)
 
 from waveshare_OLED import OLED_1in27_rgb
-
+from waveshare_OLED import config
 
 # Function to get IP address
 def get_ip():
