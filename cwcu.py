@@ -20,7 +20,7 @@ BGR = False                   # set True if red/blue look swapped
 FAN_W, FAN_H = 20, 20
 FAN_X, FAN_Y = 1, 14
 IP_REFRESH_S = 1.0
-TARGET_FPS = 20.0
+TARGET_FPS = 5.0
 # ============================================
 
 def get_ip_fast():
