@@ -113,11 +113,16 @@ def draw_frame(shrink, fan_frame):
 def main():
     shrink = False
     frame_idx = 0
+    frame_interval = 1 / 20  # target ~20 frames per second
     while True:
+        start = time.perf_counter()
         draw_frame(shrink, fan_frames[frame_idx])
         shrink = not shrink
         frame_idx = (frame_idx + 1) % len(fan_frames)
-        time.sleep(.5)
+        elapsed = time.perf_counter() - start
+        sleep_time = frame_interval - elapsed
+        if sleep_time > 0:
+            time.sleep(sleep_time)
 
 
 if __name__ == "__main__":
