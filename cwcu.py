@@ -95,7 +95,7 @@ def draw_frame(shrink):
         draw.text((text_x, text_y + 7), "Signal", fill='black', font=font)
 
     # Step 5.1: Draw fan Icon
-    img.paste(fan_icon, (4, 16))
+    img.paste(fan_icon, (1, 12))
     
     # Step 6: Draw IP in white bar (in black text)
     ip = get_ip()
