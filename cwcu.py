@@ -71,7 +71,7 @@ def draw_frame(shrink):
         col = i % 2
         left = 0 + col * (rect_width + spacing)
         top = 12 + row * (rect_height + spacing)
-        right = left + rect_width - 1
+        right = left + rect_width - 0
         bottom = top + rect_height - 1
         draw.rectangle((left, top, right, bottom), fill='white')
 
@@ -85,9 +85,9 @@ def draw_frame(shrink):
 
         # Placeholder text in two lines with minimal spacing
         text_x = left + 2 + icon_base + 3
-        text_y = top + (rect_height - (2 * text_h + line_gap)) // 2
+        text_y = top + (rect_height - (2 * text_h + line_gap)) // 2 + 2
         draw.text((text_x, text_y), "No", fill='black', font=font)
-        draw.text((text_x, text_y + text_h + line_gap), "Signal..", fill='black', font=font)
+        draw.text((text_x, text_y + 12), "Signal..", fill='black', font=font)
 
 
     # Step 6: Draw IP in white bar (in black text)
