@@ -49,11 +49,11 @@ def draw_frame(shrink):
 
     # Step 3: White horizontal line in the middle of the metric area
     line_y = 13 + (72 // 2)
-    line_y_upd = 17 + (72 // 2)
+    line_y_upd = 18 + (72 // 2)
     draw.line((1, line_y_upd, 122, line_y_upd), fill='white')
     
     # Step 3.1: Black area white above horizontal line
-    draw.rectangle((0, 0, 123, line_y + 3), fill='black')
+    draw.rectangle((0, 0, 123, line_y + 4), fill='black')
 
     # Step 4: Bottom white IP bar (122x10)
     draw.rectangle((1, 87, 122, 94), fill='white')
