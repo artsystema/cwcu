@@ -33,7 +33,7 @@ def get_ip():
 disp = OLED_1in27_rgb.OLED_1in27_rgb()
 
 # Override SPI speed BEFORE Init()
-disp.spi.max_speed_hz = 8000000  # 8 MHz, you can try 12_000_000
+disp.spi.max_speed_hz = 16000000  # 8 MHz, you can try 12_000_000
 
 disp.Init()
 disp.clear()
