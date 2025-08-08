@@ -73,7 +73,7 @@ def draw_frame(shrink):
         top = 12 + row * (rect_height + spacing)
         right = left + rect_width - 2 * col
         bottom = top + rect_height - 1
-        draw.rectangle((left, top, right, bottom), fill='white')
+        draw.rectangle((left, top, right, bottom), fill='red')
 
         # Animated black square icon
         size = icon_base - 2 if shrink else icon_base
