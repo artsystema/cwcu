@@ -47,44 +47,38 @@ def draw_frame(shrink):
     # Step 2: Inner black metric area (122x72, top)
     draw.rectangle((1, 13, 122, 86), fill='black')
 
-    # Step 3: Bottom white IP bar (122x10)
+    # Step 3: White horizontal line in the middle of the metric area
+    line_y = 13 + (72 // 2)
+    draw.line((1, line_y, 122, line_y), fill='white')
+
+    # Step 4: Bottom white IP bar (122x10)
     draw.rectangle((1, 87, 122, 94), fill='white')
 
-    # Step 4: Four metric rectangles (2x2) with animated icons and placeholder text
-    h_spacing = 1
-    v_spacing = 1
-    metric_left, metric_top, metric_right, metric_bottom = 1, 13, 122, 86
-    metric_width = metric_right - metric_left + 1
-    metric_height = metric_bottom - metric_top + 1
-    rect_width = (metric_width - h_spacing) // 2
-    rect_height = (metric_height - v_spacing) // 2
-    icon_base = rect_height - 10  # max icon size within each rectangle
+    # Step 5: Four metric rectangles with animated icons and placeholder text
+    rect_height = 8
+    spacing = 1
+    icon_base = rect_height - 2  # max icon size
     _, text_h = font.getsize("No signal")
-
     for i in range(4):
-        row, col = divmod(i, 2)
-        left = metric_left + col * (rect_width + h_spacing)
-        top = metric_top + row * (rect_height + v_spacing)
-        right = left + rect_width - 1
+        top = 13 + i * (rect_height + spacing)
         bottom = top + rect_height - 1
-        draw.rectangle((left, top, right, bottom), fill='white')
+        draw.rectangle((1, top, 122, bottom), fill='white')
 
         # Animated black square icon
-        size = icon_base - 4 if shrink else icon_base
+        size = icon_base - 2 if shrink else icon_base
         offset = (icon_base - size) // 2
-        icon_x = left + 2 + offset
-        icon_y = top + (rect_height - icon_base) // 2 + offset
+        icon_x = 2 + offset
+        icon_y = top + 1 + offset
         draw.rectangle((icon_x, icon_y, icon_x + size - 1, icon_y + size - 1), fill='black')
 
         # Placeholder text
-        text_x = left + 2 + icon_base + 3
+        text_x = 2 + icon_base + 3
         text_y = top + (rect_height - text_h) // 2
         draw.text((text_x, text_y), "No signal", fill='black', font=font)
 
-    # Step 5: Draw IP in white bar (in black text)
+    # Step 6: Draw IP in white bar (in black text)
     ip = get_ip()
     ip_text_y = 87 + 1  # slight top padding
-
     draw.text((2, ip_text_y), ip, fill='black', font=font)
 
     disp.ShowImage(disp.getbuffer(img))
