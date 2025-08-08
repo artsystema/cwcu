@@ -49,7 +49,8 @@ def draw_frame(shrink):
 
     # Step 3: White horizontal line in the middle of the metric area
     line_y = 13 + (72 // 2)
-    draw.line((1, line_y, 122, line_y + 4), fill='white')
+    line_y_upd = 17 + (72 // 2)
+    draw.line((1, line_y, 122, line_y_upd), fill='white')
     
     # Step 3.1: Black area white above horizontal line
     draw.rectangle((0, 0, 123, line_y + 3), fill='black')
