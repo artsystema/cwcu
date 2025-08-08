@@ -117,7 +117,7 @@ def main():
         draw_frame(shrink, fan_frames[frame_idx])
         shrink = not shrink
         frame_idx = (frame_idx + 1) % len(fan_frames)
-        time.sleep(1 / 15)
+        time.sleep(.5)
 
 
 if __name__ == "__main__":
