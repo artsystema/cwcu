@@ -33,11 +33,11 @@ disp = OLED_1in27_rgb.OLED_1in27_rgb()
 disp.Init()
 disp.clear()
 
-font = ImageFont.load("arial.pil")
+font = ImageFont.load_default()
 
 
 def draw_frame(shrink):
-    """Render a single frame on the OLED display."""
+    # """Render a single frame on the OLED display."""
     img = Image.new('RGB', (disp.width, disp.height), 'black')
     draw = ImageDraw.Draw(img)
 
@@ -49,10 +49,10 @@ def draw_frame(shrink):
 
     # Step 3: White horizontal line in the middle of the metric area
     line_y = 12 + (72 // 2)
-    draw.line((1, line_y, 122, line_y + 2), fill='white')
+    draw.line((1, line_y, 122, line_y + 4), fill='white')
     
     # Step 3.1: Black area white above horizontal line
-    draw.rectangle((0, 0, 123, line_y + 1), fill='black')
+    draw.rectangle((0, 0, 123, line_y + 3), fill='black')
 
     # Step 4: Bottom white IP bar (122x10)
     draw.rectangle((1, 87, 122, 94), fill='white')
