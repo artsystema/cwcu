@@ -37,7 +37,7 @@ font = ImageFont.load_default()
 
 
 def draw_frame(shrink):
-    # """Render a single frame on the OLED display."""
+    """Render a single frame on the OLED display."""
     img = Image.new('RGB', (disp.width, disp.height), 'black')
     draw = ImageDraw.Draw(img)
 
@@ -48,11 +48,11 @@ def draw_frame(shrink):
     draw.rectangle((1, 13, 122, 86), fill='black')
 
     # Step 3: White horizontal line in the middle of the metric area
-    line_y = 12 + (72 // 2)
-    draw.line((1, line_y, 122, line_y + 4), fill='white')
+    line_y = 13 + (72 // 2)
+    draw.line((1, line_y, 122, line_y), fill='white')
     
     # Step 3.1: Black area white above horizontal line
-    draw.rectangle((0, 0, 123, line_y + 3), fill='black')
+    draw.rectangle((0, 0, 123, line_y - 1), fill='black')
 
     # Step 4: Bottom white IP bar (122x10)
     draw.rectangle((1, 87, 122, 94), fill='white')
@@ -70,10 +70,10 @@ def draw_frame(shrink):
         row = i // 2
         col = i % 2
         left = 0 + col * (rect_width + spacing) + col * 2
-        top = 12 + row * (rect_height + spacing) + 1 * row
+        top = 12 + row * (rect_height + spacing)
         right = left + rect_width - 2 * col
         bottom = top + rect_height - 1
-        draw.rectangle((left, top, right, bottom), fill='red')
+        draw.rectangle((left, top, right, bottom), fill='white')
 
         # Animated black square icon
         size = icon_base - 2 if shrink else icon_base
