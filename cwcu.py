@@ -33,7 +33,7 @@ disp = OLED_1in27_rgb.OLED_1in27_rgb()
 disp.Init()
 disp.clear()
 
-font = ImageFont.load_default()
+font = ImageFont.load("arial.pil")
 
 
 def draw_frame(shrink):
