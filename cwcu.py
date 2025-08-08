@@ -87,7 +87,7 @@ def draw_frame(shrink):
         text_x = left + 2 + icon_base + 3
         text_y = top + (rect_height - (2 * text_h + line_gap)) // 2 + 2
         draw.text((text_x, text_y), "No", fill='black', font=font)
-        draw.text((text_x, text_y + 12), "Signal..", fill='black', font=font)
+        draw.text((text_x, text_y + 7), "Signal", fill='black', font=font)
 
 
     # Step 6: Draw IP in white bar (in black text)
