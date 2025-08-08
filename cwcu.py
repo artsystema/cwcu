@@ -17,7 +17,7 @@ V_OFFSET = 32                 # <-- key fix for 128×96 on 128×128 SSD1351 RAM
 H_OFFSET = 0
 BGR = False                   # set True if red/blue look swapped
 
-FAN_W, FAN_H = 20, 20
+FAN_W, FAN_H = 16, 16
 FAN_X, FAN_Y = 1, 14
 IP_REFRESH_S = 1.0
 TARGET_FPS = 5.0
