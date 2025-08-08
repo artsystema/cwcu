@@ -2,6 +2,7 @@
 # -*- coding:utf-8 -*-
 
 import sys
+import glob
 import os
 import time
 import socket
@@ -35,6 +36,9 @@ disp.clear()
 
 font = ImageFont.load_default()
 
+# Load all frames
+fan_frames = [Image.open(f).convert("RGB") for f in sorted(glob.glob("pic/fan_*.png"))]
+fan_icon = Image.open("pic/fan_0.png").convert("RGB")
 
 def draw_frame(shrink):
     """Render a single frame on the OLED display."""
@@ -90,7 +94,9 @@ def draw_frame(shrink):
         draw.text((text_x, text_y), "No", fill='black', font=font)
         draw.text((text_x, text_y + 7), "Signal", fill='black', font=font)
 
-
+    # Step 5.1: Draw fan Icon
+    img.paste(icon, (4, 16))
+    
     # Step 6: Draw IP in white bar (in black text)
     ip = get_ip()
     ip_text_y = 85 + 1  # slight top padding
