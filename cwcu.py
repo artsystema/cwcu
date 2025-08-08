@@ -6,20 +6,23 @@ from PIL import Image, ImageDraw, ImageFont
 
 # pip install luma.oled luma.core
 from luma.core.interface.serial import spi
-from luma.oled.device import ssd1351  # change to ssd1331 if needed
+from luma.oled.device import ssd1351  # use ssd1331 if your board is that controller
 
-# ---------- config ----------
+# ================== CONFIG ==================
 WIDTH, HEIGHT = 128, 96
-SPI_HZ = 24_000_000           # try 24 MHz; drop to 16 MHz if you see artifacts
+SPI_HZ = 24_000_000           # try 24–32 MHz if wiring is short; drop to 16 MHz if unstable
 SPI_PORT, SPI_DEVICE = 0, 0   # /dev/spidev0.0
-GPIO_DC, GPIO_RST = 25, 24    # change if you wired differently
+GPIO_DC, GPIO_RST = 25, 24    # change if wired differently
+V_OFFSET = 32                 # <-- key fix for 128×96 on 128×128 SSD1351 RAM
+H_OFFSET = 0
+BGR = False                   # set True if red/blue look swapped
 
 FAN_W, FAN_H = 20, 20
-FAN_X, FAN_Y = 1, 14          # top panel anchor for fan sprite
-IP_REFRESH_S = 1.0            # how often to re-read IP
+FAN_X, FAN_Y = 1, 14
+IP_REFRESH_S = 1.0
 TARGET_FPS = 20.0
+# ============================================
 
-# ---------- utils ----------
 def get_ip_fast():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -31,24 +34,34 @@ def get_ip_fast():
     except Exception:
         return "No IP"
 
-# ---------- init display ----------
-serial = spi(port=SPI_PORT, device=SPI_DEVICE, gpio_DC=GPIO_DC, gpio_RST=GPIO_RST,
-             bus_speed_hz=SPI_HZ)
-device = ssd1351(serial, width=WIDTH, height=HEIGHT, rotate=0)
+# ---- init display (hardware SPI) ----
+serial = spi(
+    port=SPI_PORT,
+    device=SPI_DEVICE,
+    gpio_DC=GPIO_DC,
+    gpio_RST=GPIO_RST,
+    bus_speed_hz=SPI_HZ
+)
+device = ssd1351(
+    serial,
+    width=WIDTH,
+    height=HEIGHT,
+    rotate=0,
+    h_offset=H_OFFSET,
+    v_offset=V_OFFSET,
+    bgr=BGR
+)
 
-# ---------- fonts ----------
+# ---- fonts ----
 font = ImageFont.load_default()
 
-# ---------- load fan frames (once) ----------
+# ---- load fan frames once ----
 fan_paths = sorted(glob.glob("pic/fan_*.png"))
 if not fan_paths:
     raise RuntimeError("No fan frames found: pic/fan_*.png")
-fan_frames = []
-for p in fan_paths:
-    im = Image.open(p).convert("RGB").resize((FAN_W, FAN_H), Image.NEAREST)
-    fan_frames.append(im)
+fan_frames = [Image.open(p).convert("RGB").resize((FAN_W, FAN_H), Image.NEAREST) for p in fan_paths]
 
-# ---------- prebuild static background ----------
+# ---- build static background once ----
 bg = Image.new("RGB", (WIDTH, HEIGHT), "black")
 d = ImageDraw.Draw(bg)
 
@@ -70,7 +83,7 @@ rect_width = (124 - spacing) // 2
 rect_height = ((line_y - 10) - spacing) // 2
 icon_base = rect_height - 4  # max icon size
 
-metric_boxes = []  # geometry for per-frame updates
+metric_boxes = []
 text_bbox = font.getbbox("No")
 text_h = text_bbox[3] - text_bbox[1]
 line_gap = 1
@@ -93,7 +106,6 @@ for i in range(4):
         "text_x": text_x, "text_y": text_y
     })
 
-# ---------- per-frame draw ----------
 def make_frame(frame_idx, shrink, ip_text):
     img = bg.copy()
     draw = ImageDraw.Draw(img)
@@ -111,11 +123,10 @@ def make_frame(frame_idx, shrink, ip_text):
     # fan sprite
     img.paste(fan_frames[frame_idx], (FAN_X, FAN_Y))
 
-    # IP text
+    # IP text in bottom white bar
     draw.text((2, 86), ip_text, fill="black", font=font)
     return img
 
-# ---------- main ----------
 def main():
     target_dt = 1.0 / TARGET_FPS
     next_t = time.perf_counter()
@@ -132,7 +143,7 @@ def main():
             ip_next = now + IP_REFRESH_S
 
         img = make_frame(frame_idx, shrink, ip_cache)
-        device.display(img)  # fast full-frame push
+        device.display(img)
 
         # advance animation
         shrink = not shrink
@@ -144,7 +155,6 @@ def main():
         if sleep > 0:
             time.sleep(sleep)
         else:
-            # if we're late, snap to now to avoid drift
             next_t = time.perf_counter()
 
 if __name__ == "__main__":
