@@ -54,27 +54,35 @@ def draw_frame(shrink):
     # Step 4: Bottom white IP bar (122x10)
     draw.rectangle((1, 87, 122, 94), fill='white')
 
-    # Step 5: Four metric rectangles with animated icons and placeholder text
-    rect_height = 8
-    spacing = 1
-    icon_base = rect_height - 2  # max icon size
-    _, text_h = font.getsize("No signal")
+    # Step 5: Four metric rectangles arranged 2x2 with animated icons and placeholder text
+    spacing = 2
+    rect_width = (122 - spacing) // 2
+    rect_height = ((line_y - 13) - spacing) // 2
+    icon_base = rect_height - 4  # max icon size
+    text_bbox = font.getbbox("No")
+    text_h = text_bbox[3] - text_bbox[1]
+    line_gap = 1
     for i in range(4):
-        top = 13 + i * (rect_height + spacing)
+        row = i // 2
+        col = i % 2
+        left = 1 + col * (rect_width + spacing)
+        top = 13 + row * (rect_height + spacing)
+        right = left + rect_width - 1
         bottom = top + rect_height - 1
-        draw.rectangle((1, top, 122, bottom), fill='white')
+        draw.rectangle((left, top, right, bottom), fill='white')
 
         # Animated black square icon
         size = icon_base - 2 if shrink else icon_base
         offset = (icon_base - size) // 2
-        icon_x = 2 + offset
-        icon_y = top + 1 + offset
+        icon_x = left + 2 + offset
+        icon_y = top + 2 + offset
         draw.rectangle((icon_x, icon_y, icon_x + size - 1, icon_y + size - 1), fill='black')
 
-        # Placeholder text
-        text_x = 2 + icon_base + 3
-        text_y = top + (rect_height - text_h) // 2
-        draw.text((text_x, text_y), "No signal", fill='black', font=font)
+        # Placeholder text in two lines with minimal spacing
+        text_x = left + 2 + icon_base + 3
+        text_y = top + (rect_height - (2 * text_h + line_gap)) // 2
+        draw.text((text_x, text_y), "No", fill='black', font=font)
+        draw.text((text_x, text_y + text_h + line_gap), "Signal..", fill='black', font=font)
 
     # Step 6: Draw IP in white bar (in black text)
     ip = get_ip()
