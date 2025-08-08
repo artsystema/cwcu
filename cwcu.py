@@ -55,10 +55,10 @@ def draw_frame(shrink):
     draw.rectangle((0, 0, 123, line_y - 1), fill='black')
 
     # Step 4: Bottom white IP bar (122x10)
-    draw.rectangle((1, 87, 122, 94), fill='black')
+    draw.rectangle((1, 87, 122, 94), fill='white')
 
     # Step 5: Four metric rectangles arranged 2x2 with animated icons and placeholder text
-    spacing = 2
+    spacing = 1
     rect_width = (122 - spacing) // 2
     rect_height = ((line_y - 13) - spacing) // 2
     icon_base = rect_height - 4  # max icon size
