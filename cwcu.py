@@ -35,7 +35,7 @@ disp = OLED_1in27_rgb.OLED_1in27_rgb()
 
 # Override SPI speed BEFORE Init()
 disp.spi.max_speed_hz = 16000000  # 8 MHz, you can try 12_000_000
-print("SPI freq from config.py:", config.spi_freq)
+print("SPI freq from config.py:", disp.spi.max_speed_hz)
 disp.Init()
 disp.clear()
 
