@@ -50,9 +50,12 @@ def draw_frame(shrink):
     # Step 3: White horizontal line in the middle of the metric area
     line_y = 13 + (72 // 2)
     draw.line((1, line_y, 122, line_y), fill='white')
+    
+    # Step 3.1: Black area white above horizontal line
+    draw.line((0, 0, 123, line_y - 1), fill='black')
 
     # Step 4: Bottom white IP bar (122x10)
-    draw.rectangle((1, 87, 122, 94), fill='white')
+    draw.rectangle((0, 87, 122, 94), fill='black')
 
     # Step 5: Four metric rectangles arranged 2x2 with animated icons and placeholder text
     spacing = 2
@@ -89,7 +92,7 @@ def draw_frame(shrink):
 
     # Step 6: Draw IP in white bar (in black text)
     ip = get_ip()
-    ip_text_y = 87 + 1  # slight top padding
+    ip_text_y = 86  # slight top padding
     draw.text((2, ip_text_y), ip, fill='black', font=font)
 
     disp.ShowImage(disp.getbuffer(img))
