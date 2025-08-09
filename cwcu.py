@@ -25,8 +25,8 @@ TARGET_FPS = 5.0
 # ---- dynamic state variables ----
 # These can be modified at runtime to control the state of each tile.
 FANS = 1
-PUMPS = 1
 PROPES = 0
+PUMPS = 1
 FLOW = 0
 
 def multiply_paste(base_img, overlay, xy, opacity=1.0):
