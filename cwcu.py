@@ -28,7 +28,7 @@ TICK_S = 2.0             # advance one step every 2 seconds
 STEP_W = 3               # 2 px bar + 1 px vertical grid
 GRID_COLOR_V = (30, 30, 30)  # vertical (rightmost) grid line
 GRID_COLOR_H = (30, 30, 30)  # horizontal grid lines
-H_GRID_STEP = 2              # px between horizontal grid lines
+H_GRID_STEP = 3              # px between horizontal grid lines
 
 # Label look (left side)
 LABEL_FG_TOP = (230, 230, 230)
@@ -160,8 +160,8 @@ graph_img = Image.new("RGB", (GRID_W, GRID_H), "black")
 
 def lerp(a, b, t): return int(a + (b - a) * t + 0.5)
 
-BAR_BLUE  = (255, 0, 150)    # at ambient
-BAR_RED   = (48, 255, 59)    # at max
+BAR_BLUE  = (255, 0, 0)    # at ambient
+BAR_RED   = (0, 0, 255)    # at max
 
 def temp_to_color(temp, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
     """Linear gradient from BAR_BLUE at ambient to BAR_RED at max."""
@@ -238,12 +238,12 @@ def draw_temp_grid(img, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
     img.paste(graph_img, (AX0, AY0))
     # Top-left: max
     max_txt = f"{int(tmax)}°C"
-    draw_label(img, max_txt, (AX0 + 2, AY0 + 1), LABEL_FG_TOP, LABEL_BG, LABEL_ALPHA)
+    draw_label(img, max_txt, (AX0, AY0 + 1), LABEL_FG_TOP, LABEL_BG, LABEL_ALPHA)
     # Bottom-left: ambient
     amb_txt = f"{int(ambient)}°C"
     # place so baseline fits inside
     amb_y = AY1 - (font.getbbox('Ay')[3] - font.getbbox('Ay')[1]) - 1
-    draw_label(img, amb_txt, (AX0 + 2, amb_y), LABEL_FG_BOTTOM, LABEL_BG, LABEL_ALPHA)
+    draw_label(img, amb_txt, (AX0 , amb_y), LABEL_FG_BOTTOM, LABEL_BG, LABEL_ALPHA)
 # =======================================
 
 # ---- fake live temp source ----
@@ -257,10 +257,10 @@ def next_fake_temp(prev, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
     _fake_drift += random.uniform(-0.02, 0.02)
     _fake_drift = max(-0.6, min(0.6, _fake_drift))
     # jitter
-    val = prev + _fake_drift + random.uniform(-0.25, 0.25)
+    val = prev + _fake_drift + random.uniform(-0.75, 0.75)
     # occasional micro-bump
     if random.random() < 0.05:
-        val += random.uniform(-0.8, 0.8)
+        val += random.uniform(-2.8, 2.8)
     # clamp
     val = max(ambient, min(tmax, val))
     return val
