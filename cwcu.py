@@ -111,7 +111,7 @@ for i in range(4):
     top = 12 + row * (rect_height + spacing) + 1 * row
     right = left + rect_width - 2 * col
     bottom = top + rect_height - 1
-    d.rectangle((left, top, right, bottom), fill="gray")
+    d.rectangle((left, top, right, bottom), fill="darkgray")
 
     icon_x0 = left + 2
     icon_y0 = top + 2
@@ -150,7 +150,7 @@ def make_frame(frame_idx, shrink, ip_text, status="ok"):
         if idx != 0:
             x0 = mb["icon_x0"] + offset
             y0 = mb["icon_y0"] + offset
-            draw.rectangle((x0, y0, x0 + size - 1, y0 + size - 1), fill='black')
+            draw.rectangle((x0, y0, x0 + size - 1, y0 + size - 1), fill= rgb(25, 25, 25))
 
         # labels
         draw.text((mb["text_x"], mb["text_y"]), "No", fill='black', font=font)
