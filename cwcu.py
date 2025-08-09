@@ -17,21 +17,18 @@ V_OFFSET = 32
 H_OFFSET = 0
 BGR = False
 
-ICON_W, ICON_H = 14, 14
+ICON_W, ICON_H = 16, 16
 IP_REFRESH_S = 1.0
 TARGET_FPS = 5.0
 
-# Temp bar grid (lower half)
-AMBIENT_DEFAULT = 20.0   # left end of scale
-TEMP_MAX_DEFAULT = 50.0  # right end of scale
-TEMP_WARN = 45.0         # >= warn -> yellow
-TEMP_BAD  = 50.0         # >= bad  -> red
-TEMP_COLS = 2            # columns in the grid
-TEMP_BAR_H = 9           # bar height (pixels)
-TEMP_ROW_GAP = 2         # vertical gap between rows
-TEMP_LABEL_W = 40        # reserved pixels at left for label
-TEMP_OUTLINE = (90, 90, 90)  # bar outline color
-TEMP_TRACK   = (40, 40, 40)  # bar track color
+# Temp grid (lower half) — scrolling bar chart
+AMBIENT_DEFAULT = 20.0   # label at bottom-right
+TEMP_MAX_DEFAULT = 50.0  # label at top-right
+TICK_S = 2.0             # advance one step every 2 seconds
+STEP_W = 3               # 2 px bar + 1 px grid
+GRID_COLOR = (60, 60, 60)
+BAR_BLUE  = (0, 150, 255)    # at ambient
+BAR_RED   = (255, 59, 48)    # at max
 # ============================================
 
 # ---- dynamic state variables (top tiles) ----
@@ -41,9 +38,8 @@ PROBES = 0
 PUMPS  = 1
 FLOW   = 0
 
-# ---- placeholder temps to render as bars (feed these later) ----
-# Use floats in °C or None for missing
-TEMP_VALUES = [30.0, 29.2, 31.7, None, 27.5, 33.0]  # edit/update this at runtime
+# current temperature value to plot (feed this later)
+CURRENT_TEMP = 30.0
 
 def multiply_paste(base_img, overlay, xy, opacity=1.0):
     x, y = xy
@@ -152,82 +148,72 @@ for i in range(4):
         "rect": (left, top, right, bottom)
     })
 
-# ============= TEMP BAR GRID (no sensor read) =============
-def clamp01(x): return 0.0 if x < 0.0 else (1.0 if x > 1.0 else x)
+# ======== TEMP GRID (scrolling) ========
+# Lower-half area (inside black metric region)
+AX0, AY0, AX1, AY1 = 1, line_y_upd + 1, 122, 86
+GRID_W, GRID_H = AX1 - AX0 + 1, AY1 - AY0 + 1
+graph_img = Image.new("RGB", (GRID_W, GRID_H), "black")
 
-def temp_color(c):
-    if c is None:
-        return (200, 200, 200)       # grey for missing
-    if c >= TEMP_BAD:
-        return (255, 59, 48)         # red
-    if c >= TEMP_WARN:
-        return (255, 210, 31)        # yellow
-    return (255, 255, 255)           # white
+def lerp(a, b, t): return int(a + (b - a) * t + 0.5)
 
-def draw_temp_bars(img, temps, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
-    """
-    Draw horizontal bars for temps in the LOWER half (between divider and y=86).
-    Layout: TEMP_COLS columns; each cell shows "Tn: xx.x°" + bar.
-    """
-    draw = ImageDraw.Draw(img)
-    # drawing area inside lower half (same as earlier lower metric region)
-    ax0, ay0, ax1, ay1 = 1, line_y_upd + 1, 122, 86
-    # compute rows/cols
-    n = len(temps)
-    cols = max(1, TEMP_COLS)
-    rows = max(1, (n + cols - 1) // cols)
-
-    # vertical packing
-    total_row_h = TEMP_BAR_H + TEMP_ROW_GAP
-    needed_h = rows * total_row_h - TEMP_ROW_GAP
-    # fit if needed
-    if needed_h > (ay1 - ay0 + 1):
-        # shrink bar height a bit
-        scale = (ay1 - ay0 + 1) / needed_h
-        bar_h = max(6, int(TEMP_BAR_H * scale))
-        row_gap = max(1, int(TEMP_ROW_GAP * scale))
-        total_row_h = bar_h + row_gap
+def temp_to_color(temp, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
+    """Linear gradient from BAR_BLUE at ambient to BAR_RED at max."""
+    if temp is None:
+        return (120, 120, 120)
+    if tmax <= ambient:
+        t = 1.0
     else:
-        bar_h = TEMP_BAR_H
-        row_gap = TEMP_ROW_GAP
+        t = max(0.0, min(1.0, (temp - ambient) / (tmax - ambient)))
+    r = lerp(BAR_BLUE[0], BAR_RED[0], t)
+    g = lerp(BAR_BLUE[1], BAR_RED[1], t)
+    b = lerp(BAR_BLUE[2], BAR_RED[2], t)
+    return (r, g, b)
 
-    col_w = (ax1 - ax0 + 1) // cols
+def graph_tick(temp_value, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
+    """Advance the grid one step: scroll left by STEP_W, add new bar (2 px) + 1 px grid at right."""
+    global graph_img
+    w, h = graph_img.size
+    # scroll left
+    if STEP_W > 0:
+        graph_img.paste(graph_img.crop((STEP_W, 0, w, h)), (0, 0))
+        # clear rightmost STEP_W columns
+        ImageDraw.Draw(graph_img).rectangle((w-STEP_W, 0, w-1, h-1), fill=(0, 0, 0))
 
-    # labels use small font
-    for idx, c in enumerate(temps):
-        col = idx % cols
-        row = idx // cols
-        x0 = ax0 + col * col_w
-        y0 = ay0 + row * total_row_h
+    # compute bar height from ambient..tmax, bottom anchored
+    draw = ImageDraw.Draw(graph_img)
+    if temp_value is not None and tmax > ambient:
+        frac = max(0.0, min(1.0, (temp_value - ambient) / (tmax - ambient)))
+    else:
+        frac = 0.0
+    bar_h = int(frac * (h - 1))
+    y0 = (h - 1) - bar_h
+    col = temp_to_color(temp_value, ambient, tmax)
 
-        # label
-        label = f"T{idx+1}: " + ("--.-°" if c is None else f"{c:0.1f}°")
-        draw.text((x0, y0), label, fill=temp_color(c), font=font)
+    # draw 2-px bar (columns w-3, w-2)
+    bx0 = w - STEP_W
+    # ensure we have at least 2 columns for the bar
+    bar_cols = max(2, STEP_W - 1)
+    for dx in range(bar_cols):  # typically 0,1
+        x = bx0 + dx
+        draw.line((x, y0, x, h-1), fill=col)
 
-        # bar track rect
-        bx0 = x0 + TEMP_LABEL_W
-        bx1 = ax0 + (col + 1) * col_w - 2
-        by0 = y0
-        by1 = y0 + bar_h
+    # draw 1-px grid line at far right (column w-1)
+    draw.line((w-1, 0, w-1, h-1), fill=GRID_COLOR)
 
-        # track
-        draw.rectangle((bx0, by0, bx1, by1), fill=TEMP_TRACK, outline=TEMP_OUTLINE)
-
-        # fill if we have a value
-        if c is not None:
-            t = clamp01((c - ambient) / max(1e-6, (tmax - ambient)))
-            fx1 = int(bx0 + t * (bx1 - bx0))
-            draw.rectangle((bx0, by0, fx1, by1), fill=temp_color(c))
-
-        # optional tick marks at ambient, 30°C midpoint, and max
-        # ambient tick
-        amb_t = clamp01((ambient - ambient) / max(1e-6, (tmax - ambient)))  # 0
-        mid_t = clamp01((30.0 - ambient) / max(1e-6, (tmax - ambient)))
-        max_t = 1.0
-        for frac in (amb_t, mid_t, max_t):
-            tx = int(bx0 + frac * (bx1 - bx0))
-            draw.line((tx, by0, tx, by1), fill=(80, 80, 80))
-# ===========================================================
+def draw_temp_grid(img, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
+    """Paste the scrolling grid and draw only two labels on the right (top=max, bottom=ambient)."""
+    img.paste(graph_img, (AX0, AY0))
+    d = ImageDraw.Draw(img)
+    # Top-right: max
+    max_txt = f"{int(tmax)}°C"
+    tw = font.getbbox(max_txt)[2]
+    d.text((AX1 - tw, AY0), max_txt, fill=(220, 220, 220), font=font)
+    # Bottom-right: ambient
+    amb_txt = f"{int(ambient)}°C"
+    tw2 = font.getbbox(amb_txt)[2]
+    d.text((AX1 - tw2, AY1 - (font.getbbox('Ay')[3] - font.getbbox('Ay')[1])), amb_txt,
+           fill=(160, 160, 160), font=font)
+# =======================================
 
 def make_frame(frame_idx, ip_text, states):
     img = bg.copy()
@@ -249,8 +235,8 @@ def make_frame(frame_idx, ip_text, states):
                   fill='black', font=font)
         draw.text((mb["text_x"], mb["text_y"] + 7), "Signal", fill='black', font=font)
 
-    # temps as bars in lower half (no sensor access yet)
-    draw_temp_bars(img, TEMP_VALUES, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT)
+    # scrolling temp grid (no per-bar labels, just right-edge labels)
+    draw_temp_grid(img, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
 
     # IP in bottom white bar
     draw.text((2, 86), ip_text, fill='black', font=font)
@@ -264,11 +250,19 @@ def main():
     ip_cache = "No IP"
     ip_next = 0.0
 
+    # grid tick pacing
+    next_tick = time.perf_counter() + TICK_S
+
     while True:
         now = time.perf_counter()
         if now >= ip_next:
             ip_cache = get_ip_fast()
             ip_next = now + IP_REFRESH_S
+
+        # advance the grid one step every TICK_S
+        if now >= next_tick:
+            graph_tick(CURRENT_TEMP, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
+            next_tick += TICK_S
 
         # Order matches ICON_NAMES = ["fan","probe","pump","flow"]
         states = [FANS, PROBES, PUMPS, FLOW]
