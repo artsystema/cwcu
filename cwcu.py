@@ -151,7 +151,7 @@ def make_frame(frame_idx, ip_text, states):
             frame = frames[0]  # idle (no-signal)
         else:
             frame = frames[frame_idx % len(frames)]  # cycle 0..N-1 (uses all 3 frames)
-
+        multiply_paste(img, frame, (mb["icon_x0"], mb["icon_y0"]), opacity=1.0)
         # labels
         draw.text((mb["text_x"], mb["text_y"]), "No", fill='black', font=font)
         draw.text((mb["text_x"], mb["text_y"] + 7), "Signal", fill='black', font=font)
