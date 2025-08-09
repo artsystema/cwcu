@@ -24,8 +24,8 @@ TARGET_FPS = 5.0
 
 # ---- dynamic state variables ----
 # These can be modified at runtime to control the state of each tile.
-FANS = 0
-PUMPS = 0
+FANS = 1
+PUMPS = 1
 PROPES = 0
 FLOW = 0
 
@@ -78,7 +78,7 @@ STATE_COLORS = {
 font = ImageFont.load_default()
 
 # ---- load icon frames once ----
-ICON_NAMES = ["fan", "pump", "probe", "flow"]
+ICON_NAMES = ["fan", "probe", "pump", "flow"]
 icon_frames = {}
 for name in ICON_NAMES:
     paths = sorted(glob.glob(f"pic/{name}_*.png"))
