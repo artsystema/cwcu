@@ -22,6 +22,13 @@ IP_REFRESH_S = 1.0
 TARGET_FPS = 5.0
 # ============================================
 
+# ---- dynamic state variables ----
+# These can be modified at runtime to control the state of each tile.
+FANS = 0
+PUMPS = 0
+PROPES = 0
+FLOW = 0
+
 def multiply_paste(base_img, overlay, xy, opacity=1.0):
     """Multiply-blend `overlay` onto `base_img` at (x,y). Overlay should be RGB."""
     x, y = xy
@@ -161,7 +168,6 @@ def main():
     frame_idx = 0
     ip_cache = "No IP"
     ip_next = 0.0
-    states = [0, 1, 2, 3]
 
     while True:
         now = time.perf_counter()
@@ -169,6 +175,7 @@ def main():
             ip_cache = get_ip_fast()
             ip_next = now + IP_REFRESH_S
 
+        states = [FANS, PUMPS, PROPES, FLOW]
         img = make_frame(frame_idx, ip_cache, states)
         device.display(img)
 
