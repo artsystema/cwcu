@@ -72,7 +72,7 @@ STATE_COLORS = {
     0: (50, 50, 50),   # no signal
     1: (255, 255, 255),  # ok
     2: (255, 210, 31),   # warn
-    3: (255, 59, 48)     # bad
+    3: (48, 255, 59)     # bad
 }
 # ---- fonts ----
 font = ImageFont.load_default()
