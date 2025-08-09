@@ -63,19 +63,24 @@ device = ssd1351(
     bgr=BGR
 )
 STATE_COLORS = {
-    "no":  (50, 50, 50),  # grey - no signal
-    "ok":  (255, 255, 255),  # white - normal
-    "warn":(255, 210, 31),   # yellow - warning
-    "bad": (255, 59, 48)     # red - bad
+    0: (50, 50, 50),   # no signal
+    1: (255, 255, 255),  # ok
+    2: (255, 210, 31),   # warn
+    3: (255, 59, 48)     # bad
 }
 # ---- fonts ----
 font = ImageFont.load_default()
 
-# ---- load fan frames once ----
-fan_paths = sorted(glob.glob("pic/fan_*.png"))
-if not fan_paths:
-    raise RuntimeError("No fan frames found: pic/fan_*.png")
-fan_frames = [Image.open(p).convert("RGB").resize((FAN_W, FAN_H), Image.NEAREST) for p in fan_paths]
+# ---- load icon frames once ----
+ICON_NAMES = ["fan", "pump", "probe", "flow"]
+icon_frames = {}
+for name in ICON_NAMES:
+    paths = sorted(glob.glob(f"pic/{name}_*.png"))
+    if not paths:
+        raise RuntimeError(f"No {name} frames found: pic/{name}_*.png")
+    frames = [Image.open(p).convert("RGB").resize((ICON_W, ICON_H), Image.NEAREST) for p in paths]
+    icon_frames[name] = frames
+MAX_FRAMES = max(len(frames) for frames in icon_frames.values())
 
 # ---- build static background once ----
 bg = Image.new("RGB", (WIDTH, HEIGHT), "black")
@@ -118,39 +123,29 @@ for i in range(4):
     text_x = left + 2 + icon_base + 3
     text_y = top + (rect_height - (2 * text_h + line_gap)) // 2 + 2
     metric_boxes.append({
-        "icon_x0": icon_x0, "icon_y0": icon_y0,
-        "text_x": text_x, "text_y": text_y
+        "icon_x0": icon_x0,
+        "icon_y0": icon_y0,
+        "text_x": text_x,
+        "text_y": text_y,
+        "rect": (left, top, right, bottom)
     })
 
-def make_frame(frame_idx, shrink, ip_text, status="ok"):
+def make_frame(frame_idx, ip_text, states):
     img = bg.copy()
     draw = ImageDraw.Draw(img)
 
-    # --- fill the top-left metric box with status color ---
-    # metric_boxes[0] is the top-left box; it starts at icon_x0-2, icon_y0-2 with size based on icon_base
-    mb0 = metric_boxes[0]
-    # Reconstruct the box rect from earlier geometry
-    box_left  = mb0["icon_x0"] - 2
-    box_top   = mb0["icon_y0"] - 2
-    box_right = box_left + (rect_width - 0)  # same as when created
-    box_bottom= box_top  + (rect_height - 1)
-    draw.rectangle((box_left, box_top, box_right, box_bottom), fill=STATE_COLORS.get(status, (255,255,255)))
-
-    # --- fan sprite blended with multiply inside that box ---
-    # Place fan where your icon would be (left padding = 2 px)
-    fan_x = mb0["icon_x0"]
-    fan_y = mb0["icon_y0"]
-    multiply_paste(img, fan_frames[frame_idx], (fan_x, fan_y), opacity=1.0)
-
-    # --- draw the other metric boxes' icons/text (including top-left text on top of colored box) ---
-    size = icon_base - 2 if shrink else icon_base
-    offset = (icon_base - size) // 2
     for idx, mb in enumerate(metric_boxes):
-        # animated black square icon (skip drawing the square under the fan for top-left if you want it clean)
-        if idx != 0:
-            x0 = mb["icon_x0"] + offset
-            y0 = mb["icon_y0"] + offset
-            draw.rectangle((x0, y0, x0 + size - 1, y0 + size - 1), fill=(25, 25, 25))
+        state = states[idx] if idx < len(states) else 0
+        color = STATE_COLORS.get(state, STATE_COLORS[0])
+        draw.rectangle(mb["rect"], fill=color)
+
+        name = ICON_NAMES[idx]
+        frames = icon_frames[name]
+        if state == 0:
+            frame = frames[0]
+        else:
+            frame = frames[(frame_idx % (len(frames) - 1)) + 1]
+        multiply_paste(img, frame, (mb["icon_x0"], mb["icon_y0"]), opacity=1.0)
 
         # labels
         draw.text((mb["text_x"], mb["text_y"]), "No", fill='black', font=font)
@@ -164,10 +159,10 @@ def main():
     target_dt = 1.0 / TARGET_FPS
     next_t = time.perf_counter()
 
-    shrink = False
     frame_idx = 0
     ip_cache = "No IP"
     ip_next = 0.0
+    states = [0, 1, 2, 3]
 
     while True:
         now = time.perf_counter()
@@ -175,12 +170,10 @@ def main():
             ip_cache = get_ip_fast()
             ip_next = now + IP_REFRESH_S
 
-        img = make_frame(frame_idx, shrink, ip_cache, status="ok")  # change status dynamically
+        img = make_frame(frame_idx, ip_cache, states)
         device.display(img)
 
-        # advance animation
-        shrink = not shrink
-        frame_idx = (frame_idx + 1) % len(fan_frames)
+        frame_idx = (frame_idx + 1) % MAX_FRAMES
 
         # frame pacing
         next_t += target_dt
