@@ -175,7 +175,7 @@ def main():
             ip_cache = get_ip_fast()
             ip_next = now + IP_REFRESH_S
 
-        img = make_frame(frame_idx, shrink, ip_cache, status="warn")  # change status dynamically
+        img = make_frame(frame_idx, shrink, ip_cache, status="ok")  # change status dynamically
         device.display(img)
 
         # advance animation
