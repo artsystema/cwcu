@@ -17,7 +17,7 @@ V_OFFSET = 32
 H_OFFSET = 0
 BGR = False
 
-ICON_W, ICON_H = 16, 16
+ICON_W, ICON_H = 15, 15
 IP_REFRESH_S = 1.0
 TARGET_FPS = 5.0
 
@@ -26,9 +26,9 @@ AMBIENT_DEFAULT = 20.0   # bottom label
 TEMP_MAX_DEFAULT = 50.0  # top label
 TICK_S = 2.0             # advance one step every 2 seconds
 STEP_W = 3               # 2 px bar + 1 px vertical grid
-GRID_COLOR_V = (60, 60, 60)  # vertical (rightmost) grid line
-GRID_COLOR_H = (50, 50, 50)  # horizontal grid lines
-H_GRID_STEP = 6              # px between horizontal grid lines
+GRID_COLOR_V = (30, 30, 30)  # vertical (rightmost) grid line
+GRID_COLOR_H = (30, 30, 30)  # horizontal grid lines
+H_GRID_STEP = 2              # px between horizontal grid lines
 
 # Label look (left side)
 LABEL_FG_TOP = (230, 230, 230)
@@ -160,8 +160,8 @@ graph_img = Image.new("RGB", (GRID_W, GRID_H), "black")
 
 def lerp(a, b, t): return int(a + (b - a) * t + 0.5)
 
-BAR_BLUE  = (0, 150, 255)    # at ambient
-BAR_RED   = (255, 59, 48)    # at max
+BAR_BLUE  = (255, 0, 150)    # at ambient
+BAR_RED   = (48, 255, 59)    # at max
 
 def temp_to_color(temp, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
     """Linear gradient from BAR_BLUE at ambient to BAR_RED at max."""
