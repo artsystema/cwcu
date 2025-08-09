@@ -150,7 +150,7 @@ def make_frame(frame_idx, shrink, ip_text, status="ok"):
         if idx != 0:
             x0 = mb["icon_x0"] + offset
             y0 = mb["icon_y0"] + offset
-            draw.rectangle((x0, y0, x0 + size - 1, y0 + size - 1), fill= rgb(25, 25, 25))
+            draw.rectangle((x0, y0, x0 + size - 1, y0 + size - 1), fill=(25, 25, 25))
 
         # labels
         draw.text((mb["text_x"], mb["text_y"]), "No", fill='black', font=font)
