@@ -63,7 +63,7 @@ device = ssd1351(
     bgr=BGR
 )
 STATE_COLORS = {
-    "no":  (191, 191, 191),  # grey - no signal
+    "no":  (50, 50, 50),  # grey - no signal
     "ok":  (255, 255, 255),  # white - normal
     "warn":(255, 210, 31),   # yellow - warning
     "bad": (255, 59, 48)     # red - bad
