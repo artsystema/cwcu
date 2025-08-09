@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os, glob, time, socket
+import os, glob, time, socket, random
 from PIL import Image, ImageDraw, ImageFont, ImageChops
 
 # pip install luma.oled luma.core
@@ -22,13 +22,20 @@ IP_REFRESH_S = 1.0
 TARGET_FPS = 5.0
 
 # Temp grid (lower half) — scrolling bar chart
-AMBIENT_DEFAULT = 20.0   # label at bottom-right
-TEMP_MAX_DEFAULT = 50.0  # label at top-right
+AMBIENT_DEFAULT = 20.0   # bottom label
+TEMP_MAX_DEFAULT = 50.0  # top label
 TICK_S = 2.0             # advance one step every 2 seconds
-STEP_W = 3               # 2 px bar + 1 px grid
-GRID_COLOR = (60, 60, 60)
-BAR_BLUE  = (0, 150, 255)    # at ambient
-BAR_RED   = (255, 59, 48)    # at max
+STEP_W = 3               # 2 px bar + 1 px vertical grid
+GRID_COLOR_V = (60, 60, 60)  # vertical (rightmost) grid line
+GRID_COLOR_H = (50, 50, 50)  # horizontal grid lines
+H_GRID_STEP = 6              # px between horizontal grid lines
+
+# Label look (left side)
+LABEL_FG_TOP = (230, 230, 230)
+LABEL_FG_BOTTOM = (170, 170, 170)
+LABEL_BG = (0, 0, 0)      # semi-transparent bg color
+LABEL_ALPHA = 140         # 0..255 transparency
+LABEL_PAD = (3, 1)        # x, y padding inside label box
 # ============================================
 
 # ---- dynamic state variables (top tiles) ----
@@ -37,9 +44,6 @@ FANS   = 1
 PROBES = 0
 PUMPS  = 1
 FLOW   = 0
-
-# current temperature value to plot (feed this later)
-CURRENT_TEMP = 30.0
 
 def multiply_paste(base_img, overlay, xy, opacity=1.0):
     x, y = xy
@@ -156,6 +160,9 @@ graph_img = Image.new("RGB", (GRID_W, GRID_H), "black")
 
 def lerp(a, b, t): return int(a + (b - a) * t + 0.5)
 
+BAR_BLUE  = (0, 150, 255)    # at ambient
+BAR_RED   = (255, 59, 48)    # at max
+
 def temp_to_color(temp, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
     """Linear gradient from BAR_BLUE at ambient to BAR_RED at max."""
     if temp is None:
@@ -169,18 +176,31 @@ def temp_to_color(temp, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
     b = lerp(BAR_BLUE[2], BAR_RED[2], t)
     return (r, g, b)
 
+def draw_h_grid_segment(draw, x0, x1, h):
+    """Draw horizontal grid lines only in [x0,x1], so lines appear under new content after scroll."""
+    for y in range(0, h, H_GRID_STEP):
+        draw.line((x0, y, x1, y), fill=GRID_COLOR_H)
+
 def graph_tick(temp_value, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
-    """Advance the grid one step: scroll left by STEP_W, add new bar (2 px) + 1 px grid at right."""
+    """Advance the grid one step: scroll left by STEP_W, add 2px bar + 1px vertical grid at right, with horiz lines."""
     global graph_img
     w, h = graph_img.size
     # scroll left
     if STEP_W > 0:
         graph_img.paste(graph_img.crop((STEP_W, 0, w, h)), (0, 0))
         # clear rightmost STEP_W columns
-        ImageDraw.Draw(graph_img).rectangle((w-STEP_W, 0, w-1, h-1), fill=(0, 0, 0))
+        segment = Image.new("RGB", (STEP_W, h), "black")
+        graph_img.paste(segment, (w - STEP_W, 0))
+
+    draw = ImageDraw.Draw(graph_img)
+
+    # draw horizontal grid lines in the new rightmost segment (under the bar)
+    seg_x0 = w - STEP_W
+    seg_x1 = w - 2  # leave last col for vertical grid
+    if seg_x0 <= seg_x1:
+        draw_h_grid_segment(draw, seg_x0, seg_x1, h)
 
     # compute bar height from ambient..tmax, bottom anchored
-    draw = ImageDraw.Draw(graph_img)
     if temp_value is not None and tmax > ambient:
         frac = max(0.0, min(1.0, (temp_value - ambient) / (tmax - ambient)))
     else:
@@ -189,31 +209,61 @@ def graph_tick(temp_value, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
     y0 = (h - 1) - bar_h
     col = temp_to_color(temp_value, ambient, tmax)
 
-    # draw 2-px bar (columns w-3, w-2)
-    bx0 = w - STEP_W
-    # ensure we have at least 2 columns for the bar
+    # draw 2-px bar (columns w-STEP_W .. w-STEP_W+1)
     bar_cols = max(2, STEP_W - 1)
+    bx0 = w - STEP_W
     for dx in range(bar_cols):  # typically 0,1
         x = bx0 + dx
-        draw.line((x, y0, x, h-1), fill=col)
+        if x <= w - 2:  # avoid last grid column
+            draw.line((x, y0, x, h - 1), fill=col)
 
-    # draw 1-px grid line at far right (column w-1)
-    draw.line((w-1, 0, w-1, h-1), fill=GRID_COLOR)
+    # draw 1-px vertical grid line at far right (column w-1)
+    draw.line((w - 1, 0, w - 1, h - 1), fill=GRID_COLOR_V)
+
+def draw_label(img, text, pos_xy, fg, bg, alpha):
+    """Draw text with a semi-transparent background box."""
+    tx, ty = pos_xy
+    bbox = font.getbbox(text)
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+    pad_x, pad_y = LABEL_PAD
+    w, h = tw + 2 * pad_x, th + 2 * pad_y
+    label = Image.new("RGBA", (w, h), (bg[0], bg[1], bg[2], alpha))
+    ld = ImageDraw.Draw(label)
+    ld.text((pad_x, pad_y), text, fill=fg, font=font)
+    img.paste(label, (tx, ty), label)
 
 def draw_temp_grid(img, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
-    """Paste the scrolling grid and draw only two labels on the right (top=max, bottom=ambient)."""
+    """Paste the scrolling grid; draw only two labels on the LEFT (top=max, bottom=ambient) with translucent bg."""
     img.paste(graph_img, (AX0, AY0))
-    d = ImageDraw.Draw(img)
-    # Top-right: max
+    # Top-left: max
     max_txt = f"{int(tmax)}°C"
-    tw = font.getbbox(max_txt)[2]
-    d.text((AX1 - tw, AY0), max_txt, fill=(220, 220, 220), font=font)
-    # Bottom-right: ambient
+    draw_label(img, max_txt, (AX0 + 2, AY0 + 1), LABEL_FG_TOP, LABEL_BG, LABEL_ALPHA)
+    # Bottom-left: ambient
     amb_txt = f"{int(ambient)}°C"
-    tw2 = font.getbbox(amb_txt)[2]
-    d.text((AX1 - tw2, AY1 - (font.getbbox('Ay')[3] - font.getbbox('Ay')[1])), amb_txt,
-           fill=(160, 160, 160), font=font)
+    # place so baseline fits inside
+    amb_y = AY1 - (font.getbbox('Ay')[3] - font.getbbox('Ay')[1]) - 1
+    draw_label(img, amb_txt, (AX0 + 2, amb_y), LABEL_FG_BOTTOM, LABEL_BG, LABEL_ALPHA)
 # =======================================
+
+# ---- fake live temp source ----
+_fake_prev = 30.0
+_fake_drift = 0.0
+
+def next_fake_temp(prev, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
+    """Random walk with slow drift and occasional small bumps."""
+    global _fake_drift
+    # slow drift
+    _fake_drift += random.uniform(-0.02, 0.02)
+    _fake_drift = max(-0.6, min(0.6, _fake_drift))
+    # jitter
+    val = prev + _fake_drift + random.uniform(-0.25, 0.25)
+    # occasional micro-bump
+    if random.random() < 0.05:
+        val += random.uniform(-0.8, 0.8)
+    # clamp
+    val = max(ambient, min(tmax, val))
+    return val
 
 def make_frame(frame_idx, ip_text, states):
     img = bg.copy()
@@ -235,7 +285,7 @@ def make_frame(frame_idx, ip_text, states):
                   fill='black', font=font)
         draw.text((mb["text_x"], mb["text_y"] + 7), "Signal", fill='black', font=font)
 
-    # scrolling temp grid (no per-bar labels, just right-edge labels)
+    # scrolling temp grid + left labels
     draw_temp_grid(img, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
 
     # IP in bottom white bar
@@ -252,6 +302,8 @@ def main():
 
     # grid tick pacing
     next_tick = time.perf_counter() + TICK_S
+    global _fake_prev
+    _fake_prev = 30.0
 
     while True:
         now = time.perf_counter()
@@ -259,9 +311,10 @@ def main():
             ip_cache = get_ip_fast()
             ip_next = now + IP_REFRESH_S
 
-        # advance the grid one step every TICK_S
+        # advance the grid one step every TICK_S with fake live temp
         if now >= next_tick:
-            graph_tick(CURRENT_TEMP, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
+            _fake_prev = next_fake_temp(_fake_prev, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
+            graph_tick(_fake_prev, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
             next_tick += TICK_S
 
         # Order matches ICON_NAMES = ["fan","probe","pump","flow"]
