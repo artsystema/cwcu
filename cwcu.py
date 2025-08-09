@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os, glob, time, socket
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageChops
 
 # pip install luma.oled luma.core
 from luma.core.interface.serial import spi
@@ -22,6 +22,17 @@ FAN_X, FAN_Y = 1, 14
 IP_REFRESH_S = 1.0
 TARGET_FPS = 5.0
 # ============================================
+
+def multiply_paste(base_img, overlay, xy, opacity=1.0):
+    """Multiply-blend `overlay` onto `base_img` at (x,y). Overlay should be RGB."""
+    x, y = xy
+    w, h = overlay.size
+    region = base_img.crop((x, y, x + w, y + h)).convert("RGB")
+    ov = overlay.convert("RGB")
+    mul = ImageChops.multiply(region, ov)
+    if opacity < 1.0:
+        mul = Image.blend(region, mul, opacity)
+    base_img.paste(mul, (x, y))
 
 def get_ip_fast():
     try:
@@ -51,7 +62,12 @@ device = ssd1351(
     v_offset=V_OFFSET,
     bgr=BGR
 )
-
+STATE_COLORS = {
+    "no":  (191, 191, 191),  # grey - no signal
+    "ok":  (255, 255, 255),  # white - normal
+    "warn":(255, 210, 31),   # yellow - warning
+    "bad": (255, 59, 48)     # red - bad
+}
 # ---- fonts ----
 font = ImageFont.load_default()
 
@@ -106,25 +122,42 @@ for i in range(4):
         "text_x": text_x, "text_y": text_y
     })
 
-def make_frame(frame_idx, shrink, ip_text):
+def make_frame(frame_idx, shrink, ip_text, status="ok"):
     img = bg.copy()
     draw = ImageDraw.Draw(img)
 
-    # animate black square icons
+    # --- fill the top-left metric box with status color ---
+    # metric_boxes[0] is the top-left box; it starts at icon_x0-2, icon_y0-2 with size based on icon_base
+    mb0 = metric_boxes[0]
+    # Reconstruct the box rect from earlier geometry
+    box_left  = mb0["icon_x0"] - 2
+    box_top   = mb0["icon_y0"] - 2
+    box_right = box_left + (rect_width - 0)  # same as when created
+    box_bottom= box_top  + (rect_height - 1)
+    draw.rectangle((box_left, box_top, box_right, box_bottom), fill=STATE_COLORS.get(status, (255,255,255)))
+
+    # --- fan sprite blended with multiply inside that box ---
+    # Place fan where your icon would be (left padding = 2 px)
+    fan_x = mb0["icon_x0"]
+    fan_y = mb0["icon_y0"]
+    multiply_paste(img, fan_frames[frame_idx], (fan_x, fan_y), opacity=1.0)
+
+    # --- draw the other metric boxes' icons/text (including top-left text on top of colored box) ---
     size = icon_base - 2 if shrink else icon_base
     offset = (icon_base - size) // 2
-    for mb in metric_boxes:
-        x0 = mb["icon_x0"] + offset
-        y0 = mb["icon_y0"] + offset
-        draw.rectangle((x0, y0, x0 + size - 1, y0 + size - 1), fill="black")
-        draw.text((mb["text_x"], mb["text_y"]), "No", fill="black", font=font)
-        draw.text((mb["text_x"], mb["text_y"] + 7), "Signal", fill="black", font=font)
+    for idx, mb in enumerate(metric_boxes):
+        # animated black square icon (skip drawing the square under the fan for top-left if you want it clean)
+        if idx != 0:
+            x0 = mb["icon_x0"] + offset
+            y0 = mb["icon_y0"] + offset
+            draw.rectangle((x0, y0, x0 + size - 1, y0 + size - 1), fill='black')
 
-    # fan sprite
-    img.paste(fan_frames[frame_idx], (FAN_X, FAN_Y))
+        # labels
+        draw.text((mb["text_x"], mb["text_y"]), "No", fill='black', font=font)
+        draw.text((mb["text_x"], mb["text_y"] + 7), "Signal", fill='black', font=font)
 
     # IP text in bottom white bar
-    draw.text((2, 86), ip_text, fill="black", font=font)
+    draw.text((2, 86), ip_text, fill='black', font=font)
     return img
 
 def main():
@@ -142,7 +175,7 @@ def main():
             ip_cache = get_ip_fast()
             ip_next = now + IP_REFRESH_S
 
-        img = make_frame(frame_idx, shrink, ip_cache)
+        img = make_frame(frame_idx, shrink, ip_cache, status="warn")  # change status dynamically
         device.display(img)
 
         # advance animation
