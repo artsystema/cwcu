@@ -95,7 +95,7 @@ for i in range(4):
     top = 12 + row * (rect_height + spacing) + 1 * row
     right = left + rect_width - 2 * col
     bottom = top + rect_height - 1
-    d.rectangle((left, top, right, bottom), fill="white")
+    d.rectangle((left, top, right, bottom), fill="gray")
 
     icon_x0 = left + 2
     icon_y0 = top + 2
