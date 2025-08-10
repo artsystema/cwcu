@@ -15,7 +15,7 @@ SPI_PORT, SPI_DEVICE = 0, 0
 GPIO_DC, GPIO_RST = 25, 24
 V_OFFSET = 32
 H_OFFSET = 0
-BGR = False
+BGR = False  # controller byte order flag for luma; keep your color tuples as BGR and we'll convert for PIL
 
 ICON_W, ICON_H = 15, 15
 IP_REFRESH_S = 1.0
@@ -26,8 +26,8 @@ AMBIENT_DEFAULT = 20.0   # bottom label
 TEMP_MAX_DEFAULT = 50.0  # top label
 TICK_S = 2.0             # advance one step every 2 seconds
 STEP_W = 3               # 2 px bar + 1 px vertical grid
-GRID_COLOR_V = (30, 30, 30)  # vertical (rightmost) grid line
-GRID_COLOR_H = (30, 30, 30)  # horizontal grid lines
+GRID_COLOR_V = (30, 30, 30)  # vertical grid line (RGB—neutral gray)
+GRID_COLOR_H = (30, 30, 30)  # horizontal grid lines (RGB—neutral gray)
 H_GRID_STEP = 3              # px between horizontal grid lines
 
 # Label look (left side)
@@ -160,21 +160,43 @@ graph_img = Image.new("RGB", (GRID_W, GRID_H), "black")
 
 def lerp(a, b, t): return int(a + (b - a) * t + 0.5)
 
-BAR_BLUE  = (255, 0, 0)    # at ambient
-BAR_RED   = (0, 0, 255)    # at max
+# ---- color gradient for bars (BGR order!) ----
+# ambient -> blue, 1/3 -> green, 2/3 -> yellow, max -> red
+BAR_BLUE   = (255, 0,   0)   # BGR: blue
+BAR_GREEN  = (0,   255, 0)   # BGR: green
+BAR_YELLOW = (0,   255, 255) # BGR: yellow
+BAR_RED    = (0,   0,   255) # BGR: red
 
-def temp_to_color(temp, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
-    """Linear gradient from BAR_BLUE at ambient to BAR_RED at max."""
+def bgr_to_rgb(c):  # convert for Pillow
+    return (c[2], c[1], c[0])
+
+def temp_to_color_bgr(temp, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
+    """Piecewise-linear 4-stop gradient in BGR: blue -> green -> yellow -> red."""
     if temp is None:
         return (120, 120, 120)
+
+    # normalize to 0..1 across [ambient, tmax]
     if tmax <= ambient:
         t = 1.0
     else:
         t = max(0.0, min(1.0, (temp - ambient) / (tmax - ambient)))
-    r = lerp(BAR_BLUE[0], BAR_RED[0], t)
-    g = lerp(BAR_BLUE[1], BAR_RED[1], t)
-    b = lerp(BAR_BLUE[2], BAR_RED[2], t)
-    return (r, g, b)
+
+    # choose the segment (0..1/3), (1/3..2/3), (2/3..1)
+    if t <= 1/3:
+        u = t / (1/3)
+        c0, c1 = BAR_BLUE, BAR_GREEN
+    elif t <= 2/3:
+        u = (t - 1/3) / (1/3)
+        c0, c1 = BAR_GREEN, BAR_YELLOW
+    else:
+        u = (t - 2/3) / (1/3)
+        c0, c1 = BAR_YELLOW, BAR_RED
+
+    # lerp per B,G,R channel (still BGR here)
+    b = lerp(c0[0], c1[0], u)
+    g = lerp(c0[1], c1[1], u)
+    r = lerp(c0[2], c1[2], u)
+    return (b, g, r)
 
 def draw_h_grid_segment(draw, x0, x1, h):
     """Draw horizontal grid lines only in [x0,x1], so lines appear under new content after scroll."""
@@ -207,7 +229,8 @@ def graph_tick(temp_value, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
         frac = 0.0
     bar_h = int(frac * (h - 1))
     y0 = (h - 1) - bar_h
-    col = temp_to_color(temp_value, ambient, tmax)
+    col_bgr = temp_to_color_bgr(temp_value, ambient, tmax)
+    col_rgb = bgr_to_rgb(col_bgr)
 
     # draw 2-px bar (columns w-STEP_W .. w-STEP_W+1)
     bar_cols = max(2, STEP_W - 1)
@@ -215,7 +238,7 @@ def graph_tick(temp_value, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
     for dx in range(bar_cols):  # typically 0,1
         x = bx0 + dx
         if x <= w - 2:  # avoid last grid column
-            draw.line((x, y0, x, h - 1), fill=col)
+            draw.line((x, y0, x, h - 1), fill=col_rgb)
 
     # draw 1-px vertical grid line at far right (column w-1)
     draw.line((w - 1, 0, w - 1, h - 1), fill=GRID_COLOR_V)
@@ -241,9 +264,8 @@ def draw_temp_grid(img, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
     draw_label(img, max_txt, (AX0, AY0 + 1), LABEL_FG_TOP, LABEL_BG, LABEL_ALPHA)
     # Bottom-left: ambient
     amb_txt = f"{int(ambient)}°C"
-    # place so baseline fits inside
     amb_y = AY1 - (font.getbbox('Ay')[3] - font.getbbox('Ay')[1]) - 1
-    draw_label(img, amb_txt, (AX0 , amb_y), LABEL_FG_BOTTOM, LABEL_BG, LABEL_ALPHA)
+    draw_label(img, amb_txt, (AX0, amb_y), LABEL_FG_BOTTOM, LABEL_BG, LABEL_ALPHA)
 # =======================================
 
 # ---- fake live temp source ----
