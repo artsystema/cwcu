@@ -25,10 +25,10 @@ TARGET_FPS = 5.0
 AMBIENT_DEFAULT = 20.0   # bottom label
 TEMP_MAX_DEFAULT = 50.0  # top label
 TICK_S = 2.0             # advance one step every 2 seconds
-STEP_W = 3               # 2 px bar + 1 px vertical grid
+STEP_W = 6               # 2 px bar + 1 px vertical grid
 GRID_COLOR_V = (30, 30, 30)  # vertical grid line (RGB—neutral gray)
 GRID_COLOR_H = (30, 30, 30)  # horizontal grid lines (RGB—neutral gray)
-H_GRID_STEP = 3              # px between horizontal grid lines
+H_GRID_STEP = 6             # px between horizontal grid lines
 
 # Label look (left side)
 LABEL_FG_TOP = (230, 230, 230)
