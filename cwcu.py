@@ -293,7 +293,6 @@ def draw_temp_grid(img, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT, current_
     amb_txt = f"{shown:0.1f}°C"
     amb_y = AY1 - (font.getbbox('Ay')[3] - font.getbbox('Ay')[1]) - 1
     draw_label(img, amb_txt, (AX0, amb_y), LABEL_FG_BOTTOM, LABEL_BG, LABEL_ALPHA)
-    print(f"Ambient: {ambient_c:.2f} °C")  # inside the tick block, after read_ambient_c()
 # =======================================
 
 # ---- fake live temp source ----
@@ -370,6 +369,8 @@ def main():
                 ambient_c = next_fake_temp(_fake_prev, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
             _fake_prev = ambient_c  # keep EMA state evolving
             last_ambient = ambient_c
+            
+            print(f"Ambient: {ambient_c:.2f} °C")      
             
             graph_tick(ambient_c, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
             next_tick += TICK_S
