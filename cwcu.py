@@ -344,7 +344,7 @@ def draw_bottom_bar(img, label, ticker_text, offset_px):
     bd.rectangle((0, label_y , label_w + 3, 8), fill="white")
     bd.text((0, label_y - 1), label, fill="black", font=font)
     # paste back to main image
-    img.paste(bar, (x0, y0))
+    img.paste(bar, (x0 - 3, y0))
 
     # return updated offset modulo cycle
     cycle = tw + TICKER_SPACER_PX
