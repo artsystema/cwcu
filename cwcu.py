@@ -366,7 +366,8 @@ def main():
             ambient_c = read_ambient_c()
             if ambient_c is None:
                 ambient_c = next_fake_temp(_fake_prev, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
-            _fake_prev = ambient_c  # keep EMA state evolving        
+            _fake_prev = ambient_c  # keep EMA state evolving
+            AMBIENT_DEFAULT = ambient_c
             graph_tick(ambient_c, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
             next_tick += TICK_S
 
