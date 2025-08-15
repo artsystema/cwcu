@@ -354,30 +354,32 @@ def main():
     global _fake_prev
     _fake_prev = 30.0
 
+    # --- keep this outside the loop so it persists between frames ---
+    current_ambient = AMBIENT_DEFAULT  # show something sensible at startup
+
     while True:
         now = time.perf_counter()
         if now >= ip_next:
             ip_cache = get_ip_fast()
             ip_next = now + IP_REFRESH_S
-            
-        last_ambient = None
-        # advance the grid one step every TICK_S with fake live temp
+
+        # advance the grid one step every TICK_S with real ambient (or fake fallback)
         if now >= next_tick:
-            # Try real ambient; if missing, fall back to the fake generator
             ambient_c = read_ambient_c()
             if ambient_c is None:
                 ambient_c = next_fake_temp(_fake_prev, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
-            _fake_prev = ambient_c  # keep EMA state evolving
-            last_ambient = ambient_c
-            
-            print(f"Ambient: {ambient_c:.2f} °C")      
-            
+            _fake_prev = ambient_c
+            current_ambient = ambient_c              # <-- update the persistent label value
+
+            # debug (optional)
+            # print(f"Ambient: {ambient_c:.2f} °C")
+
             graph_tick(ambient_c, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
             next_tick += TICK_S
 
         # Order matches ICON_NAMES = ["fan","probe","pump","flow"]
         states = [FANS, PROBES, PUMPS, FLOW]
-        img = make_frame(frame_idx, ip_cache, states, last_ambient)
+        img = make_frame(frame_idx, ip_cache, states, current_ambient)  # <-- pass the persistent value
         device.display(img)
 
         frame_idx = (frame_idx + 1) % MAX_FRAMES
@@ -388,6 +390,7 @@ def main():
             time.sleep(sleep)
         else:
             next_t = time.perf_counter()
+
 
 if __name__ == "__main__":
     main()
