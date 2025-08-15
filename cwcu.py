@@ -36,7 +36,7 @@ H_GRID_STEP = 3            # px between horizontal grid lines
 
 # Bottom bar / ticker
 BOTTOM_BAR_RECT = (1, 87, 122, 94)  # x0,y0,x1,y1 (inclusive)
-BOTTOM_LABEL = "Temp"               # or "Loop"
+BOTTOM_LABEL = "Temp."               # or "Loop"
 TICKER_SPACER_PX = 24               # gap between repeats in pixels
 TICKER_SPEED_PX = 1                 # pixels per frame
 
@@ -312,7 +312,7 @@ def _text_width(draw, text, font):
 def draw_bottom_bar(img, label, ticker_text, offset_px):
     x0, y0, x1, y1 = BOTTOM_BAR_RECT
     bar_w = x1 - x0 + 1
-    bar_h = y1 - y0 + 1
+    bar_h = y1 - y0 + 3
 
     # draw onto an off-screen buffer to clip cleanly
     bar = Image.new("RGB", (bar_w, bar_h), "white")
@@ -320,7 +320,7 @@ def draw_bottom_bar(img, label, ticker_text, offset_px):
 
     # label at left
     label_y = max(0, (bar_h - (font.getbbox('Ay')[3] - font.getbbox('Ay')[1])) // 2 - 1)
-    bd.text((2, label_y), label, fill="black", font=font)
+    bd.text((2, label_y - 2), label, fill="black", font=font)
     label_w = _text_width(bd, label, font) + 6  # include padding
 
     # ticker area starts after label
