@@ -325,7 +325,7 @@ def draw_bottom_bar(img, label, ticker_text, offset_px):
 
     # ticker area starts after label
     ticker_x0 = label_w
-    ticker_w = max(0, bar_w - ticker_x0 + 12)
+    ticker_w = max(0, bar_w - ticker_x0 + 3)
 
     # compose ticker string and measure
     tw = _text_width(bd, ticker_text, font)
@@ -342,7 +342,7 @@ def draw_bottom_bar(img, label, ticker_text, offset_px):
         bd.text((x + tw + TICKER_SPACER_PX - 1, y), ticker_text, fill="white", font=font)
 
     bd.rectangle((0, label_y , label_w + 3, 8), fill="white")
-    bd.text((6, label_y - 1), label, fill="black", font=font)
+    bd.text((2, label_y - 1), label, fill="black", font=font)
     # paste back to main image
     img.paste(bar, (x0 - 2, y0))
 
