@@ -36,7 +36,7 @@ H_GRID_STEP = 3            # px between horizontal grid lines
 
 # Bottom bar / ticker
 BOTTOM_BAR_RECT = (1, 87, 122, 94)  # x0,y0,x1,y1 (inclusive)
-BOTTOM_LABEL = " Temp."               # or "Loop"
+BOTTOM_LABEL = "Temp."               # or "Loop"
 TICKER_SPACER_PX = 24               # gap between repeats in pixels
 TICKER_SPEED_PX = 1                 # pixels per frame
 
@@ -342,7 +342,7 @@ def draw_bottom_bar(img, label, ticker_text, offset_px):
         bd.text((x + tw + TICKER_SPACER_PX - 1, y), ticker_text, fill="white", font=font)
 
     bd.rectangle((0, label_y , label_w + 3, 8), fill="white")
-    bd.text((2, label_y - 1), label, fill="black", font=font)
+    bd.text((0, label_y - 1), label, fill="black", font=font)
     # paste back to main image
     img.paste(bar, (x0, y0))
 
