@@ -311,7 +311,7 @@ def _text_width(draw, text, font):
 
 def draw_bottom_bar(img, label, ticker_text, offset_px):
     x0, y0, x1, y1 = BOTTOM_BAR_RECT
-    bar_w = x1 - x0 - 2
+    bar_w = x1 - x0 + 10
     bar_h = y1 - y0 + 3
 
     # draw onto an off-screen buffer to clip cleanly
