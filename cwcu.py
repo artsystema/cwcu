@@ -171,10 +171,10 @@ def lerp(a, b, t): return int(a + (b - a) * t + 0.5)
 
 # ---- color gradient for bars (BGR order!) ----
 # ambient -> blue, 1/3 -> green, 2/3 -> yellow, max -> red
-BAR_BLUE   = (255, 0,   0)   # BGR: blue
-BAR_GREEN  = (0,   255, 0)   # BGR: green
-BAR_YELLOW = (0,   255, 255) # BGR: yellow
-BAR_RED    = (0,   0,   255) # BGR: red
+BAR_BLUE = (255, 0, 0) # BGR: blue 
+BAR_GREEN = (0, 255, 0) # BGR: green 
+BAR_YELLOW = (0, 255, 255) # BGR: yellow 
+BAR_RED = (0, 0, 255) # BGR: red
 
 def bgr_to_rgb(c):  # convert for Pillow
     return (c[2], c[1], c[0])
