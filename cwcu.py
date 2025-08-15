@@ -9,7 +9,7 @@ from luma.core.interface.serial import spi
 from luma.oled.device import ssd1351  # use ssd1331 if your board is that controller
 
 # --- DS18B20 ambient probe ---
-AMBIENT_SENSOR_ID = 28-845efb356461  # set to '28-xxxxxxxxxxxx' to lock to a specific device, or leave None to auto-pick the first 28-*
+AMBIENT_SENSOR_ID = "28-845efb356461"  # set to '28-xxxxxxxxxxxx' to lock to a specific device, or leave None to auto-pick the first 28-*
 W1_DEVICES_GLOB = "/sys/bus/w1/devices/28-*/w1_slave"
 
 # ================== CONFIG ==================
