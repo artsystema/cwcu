@@ -311,13 +311,13 @@ def _text_width(draw, text, font):
 
 def draw_bottom_bar(img, label, ticker_text, offset_px):
     x0, y0, x1, y1 = BOTTOM_BAR_RECT
-    bar_w = x1 - x0 + 10
+    bar_w = x1 - x0 + 4
     bar_h = y1 - y0 + 3
 
     # draw onto an off-screen buffer to clip cleanly
     bar = Image.new("RGB", (bar_w, bar_h), "black")
     bd = ImageDraw.Draw(bar)
-
+    bd.line((0, 0, bar_w, 0), fill="white")
     # label at left
     label_y = max(0, (bar_h - (font.getbbox('Ay')[3] - font.getbbox('Ay')[1])) // 2 - 1)
     
