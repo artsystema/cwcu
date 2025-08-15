@@ -320,12 +320,12 @@ def draw_bottom_bar(img, label, ticker_text, offset_px):
 
     # label at left
     label_y = max(0, (bar_h - (font.getbbox('Ay')[3] - font.getbbox('Ay')[1])) // 2 - 1)
-    bd.text((2, label_y - 2), label, fill="black", font=font)
+    bd.text((2, label_y - 1), label, fill="black", font=font)
     label_w = _text_width(bd, label, font) + 6  # include padding
 
     # ticker area starts after label
     ticker_x0 = label_w
-    ticker_w = max(0, bar_w - ticker_x0)
+    ticker_w = max(0, bar_w - ticker_x0 + 12)
 
     # compose ticker string and measure
     tw = _text_width(bd, ticker_text, font)
@@ -333,7 +333,8 @@ def draw_bottom_bar(img, label, ticker_text, offset_px):
     # draw scrolling text (two copies for seamless wrap)
     x = ticker_x0 - offset_px
     y = label_y
-    bd.text((x, y), ticker_text, fill="black", font=font)
+    
+    bd.text((x, y), ticker_text, fill="white", font=font)
     # secondary copy if first has scrolled enough
     if x + tw < bar_w:
         bd.text((x + tw + TICKER_SPACER_PX, y), ticker_text, fill="black", font=font)
