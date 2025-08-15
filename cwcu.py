@@ -334,7 +334,7 @@ def draw_bottom_bar(img, label, ticker_text, offset_px):
     x = ticker_x0 - offset_px
     y = label_y
     
-    bd.rectangle((x + 20, y + 1, x1, y1), fill="black")
+    bd.rectangle((x + 20, y + 1, x1, y1 + 2), fill="black")
     
     bd.text((x - 5, y), ticker_text, fill="white", font=font)
     # secondary copy if first has scrolled enough
