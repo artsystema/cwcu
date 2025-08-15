@@ -311,7 +311,7 @@ def _text_width(draw, text, font):
 
 def draw_bottom_bar(img, label, ticker_text, offset_px):
     x0, y0, x1, y1 = BOTTOM_BAR_RECT
-    bar_w = x1 - x0 + 2
+    bar_w = x1 - x0 + 4
     bar_h = y1 - y0 + 3
 
     # draw onto an off-screen buffer to clip cleanly
@@ -342,7 +342,7 @@ def draw_bottom_bar(img, label, ticker_text, offset_px):
         bd.text((x + tw + TICKER_SPACER_PX - 1, y), ticker_text, fill="white", font=font)
 
     bd.rectangle((0, label_y , label_w + 3, 8), fill="white")
-    bd.text((3, label_y - 1), label, fill="black", font=font)
+    bd.text((4, label_y - 1), label, fill="black", font=font)
     # paste back to main image
     img.paste(bar, (x0 - 2, y0))
 
