@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os, glob, time, socket, random
-from PIL import Image, ImageDraw, ImageFont, ImageChops
+from PIL import Image, ImageDraw, ImageFont, ImageChops, Image
 
 # pip install luma.oled luma.core
 from luma.core.interface.serial import spi
@@ -26,15 +26,21 @@ IP_REFRESH_S = 1.0
 TARGET_FPS = 5.0
 
 # Temp grid (lower half) — scrolling bar chart
-AMBIENT_DEFAULT = 20.0   # bottom label
-TEMP_MAX_DEFAULT = 50.0  # top label
+AMBIENT_DEFAULT = 20.0   # scale min (label at lower-left if no sensor yet)
+TEMP_MAX_DEFAULT = 50.0  # scale max (label at upper-left)
 TICK_S = 2.0             # advance one step every 2 seconds
 STEP_W = 3               # 2 px bar + 1 px vertical grid
 GRID_COLOR_V = (30, 30, 30)  # vertical grid line (RGB—neutral gray)
 GRID_COLOR_H = (30, 30, 30)  # horizontal grid lines (RGB—neutral gray)
 H_GRID_STEP = 3            # px between horizontal grid lines
 
-# Label look (left side)
+# Bottom bar / ticker
+BOTTOM_BAR_RECT = (1, 87, 122, 94)  # x0,y0,x1,y1 (inclusive)
+BOTTOM_LABEL = "Temp"               # or "Loop"
+TICKER_SPACER_PX = 24               # gap between repeats in pixels
+TICKER_SPEED_PX = 1                 # pixels per frame
+
+# Label look (left side of grid)
 LABEL_FG_TOP = (230, 230, 230)
 LABEL_FG_BOTTOM = (170, 170, 170)
 LABEL_BG = (0, 0, 0)      # semi-transparent bg color
@@ -123,8 +129,7 @@ line_y_upd = 18 + (72 // 2)
 d.line((1, line_y_upd, 122, line_y_upd), fill="white")
 # Black area above horizontal line
 d.rectangle((0, 0, 123, line_y + 4), fill="black")
-# Bottom white IP bar
-d.rectangle((1, 87, 122, 94), fill="white")
+# Bottom bar background will be drawn each frame (since it's dynamic)
 
 spacing = 1
 rect_width = (124 - spacing) // 2
@@ -185,16 +190,16 @@ def temp_to_color_bgr(temp, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
     else:
         t = max(0.0, min(1.0, (temp - ambient) / (tmax - ambient)))
 
-    # choose the segment (0..1/3), (1/3..2/3), (2/3..1)
+    # blue -> green -> yellow -> red (correct order)
     if t <= 1/3:
         u = t / (1/3)
-        c0, c1 = BAR_RED, BAR_YELLOW
+        c0, c1 = BAR_BLUE, BAR_GREEN
     elif t <= 2/3:
         u = (t - 1/3) / (1/3)
-        c0, c1 = BAR_YELLOW , BAR_GREEN
+        c0, c1 = BAR_GREEN, BAR_YELLOW
     else:
         u = (t - 2/3) / (1/3)
-        c0, c1 = BAR_GREEN, BAR_BLUE
+        c0, c1 = BAR_YELLOW, BAR_RED
 
     # lerp per B,G,R channel (still BGR here)
     b = lerp(c0[0], c1[0], u)
@@ -206,7 +211,7 @@ def draw_h_grid_segment(draw, x0, x1, h):
     """Draw horizontal grid lines only in [x0,x1], so lines appear under new content after scroll."""
     for y in range(0, h, H_GRID_STEP):
         draw.line((x0, y, x1, y), fill=GRID_COLOR_H)
-        
+
 def _read_ds18b20_file(path):
     try:
         with open(path, "r") as f:
@@ -242,6 +247,7 @@ def graph_tick(temp_value, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
         graph_img.paste(segment, (w - STEP_W, 0))
 
     draw = ImageDraw.Draw(graph_img)
+
     # draw horizontal grid lines in the new rightmost segment (under the bar)
     seg_x0 = w - STEP_W
     seg_x1 = w - 2  # leave last col for vertical grid
@@ -285,7 +291,7 @@ def draw_label(img, text, pos_xy, fg, bg, alpha):
 def draw_temp_grid(img, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT, current_ambient=None):
     """Paste the scrolling grid; draw only two labels on the LEFT (top=max, bottom=ambient) with translucent bg."""
     img.paste(graph_img, (AX0, AY0))
-    # Top-left: max
+    # Top-left: max (scale)
     max_txt = f"{int(tmax)}°C"
     draw_label(img, max_txt, (AX0, AY0 + 1), LABEL_FG_TOP, LABEL_BG, LABEL_ALPHA)
     # Bottom-left: show live ambient if provided; otherwise the scale min
@@ -293,9 +299,57 @@ def draw_temp_grid(img, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT, current_
     amb_txt = f"{shown:0.1f}°C"
     amb_y = AY1 - (font.getbbox('Ay')[3] - font.getbbox('Ay')[1]) - 1
     draw_label(img, amb_txt, (AX0, amb_y), LABEL_FG_BOTTOM, LABEL_BG, LABEL_ALPHA)
+
+# ======== Bottom bar with scrolling ticker ========
+def _text_width(draw, text, font):
+    # robust width measure across Pillow versions
+    try:
+        return int(draw.textlength(text, font=font))
+    except Exception:
+        bbox = draw.textbbox((0, 0), text, font=font)
+        return bbox[2] - bbox[0]
+
+def draw_bottom_bar(img, label, ticker_text, offset_px):
+    x0, y0, x1, y1 = BOTTOM_BAR_RECT
+    bar_w = x1 - x0 + 1
+    bar_h = y1 - y0 + 1
+
+    # draw onto an off-screen buffer to clip cleanly
+    bar = Image.new("RGB", (bar_w, bar_h), "white")
+    bd = ImageDraw.Draw(bar)
+
+    # label at left
+    label_y = max(0, (bar_h - (font.getbbox('Ay')[3] - font.getbbox('Ay')[1])) // 2 - 1)
+    bd.text((2, label_y), label, fill="black", font=font)
+    label_w = _text_width(bd, label, font) + 6  # include padding
+
+    # ticker area starts after label
+    ticker_x0 = label_w
+    ticker_w = max(0, bar_w - ticker_x0)
+
+    # compose ticker string and measure
+    tw = _text_width(bd, ticker_text, font)
+
+    # draw scrolling text (two copies for seamless wrap)
+    x = ticker_x0 - offset_px
+    y = label_y
+    bd.text((x, y), ticker_text, fill="black", font=font)
+    # secondary copy if first has scrolled enough
+    if x + tw < bar_w:
+        bd.text((x + tw + TICKER_SPACER_PX, y), ticker_text, fill="black", font=font)
+
+    # paste back to main image
+    img.paste(bar, (x0, y0))
+
+    # return updated offset modulo cycle
+    cycle = tw + TICKER_SPACER_PX
+    if cycle <= 0:
+        return 0
+    return (offset_px + TICKER_SPEED_PX) % cycle
+
 # =======================================
 
-# ---- fake live temp source ----
+# ---- fake live temp source (fallback) ----
 _fake_prev = 30.0
 _fake_drift = 0.0
 
@@ -314,7 +368,7 @@ def next_fake_temp(prev, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
     val = max(ambient, min(tmax, val))
     return val
 
-def make_frame(frame_idx, ip_text, states, current_ambient=None):
+def make_frame(frame_idx, ip_text, states, current_ambient, ticker_text, ticker_offset):
     img = bg.copy()
     draw = ImageDraw.Draw(img)
 
@@ -337,9 +391,10 @@ def make_frame(frame_idx, ip_text, states, current_ambient=None):
     # scrolling temp grid + left labels
     draw_temp_grid(img, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT, current_ambient)
 
-    # IP in bottom white bar
-    draw.text((2, 86), ip_text, fill='black', font=font)
-    return img
+    # bottom bar with ticker
+    new_offset = draw_bottom_bar(img, BOTTOM_LABEL, ticker_text, ticker_offset)
+
+    return img, new_offset
 
 def main():
     target_dt = 1.0 / TARGET_FPS
@@ -354,8 +409,11 @@ def main():
     global _fake_prev
     _fake_prev = 30.0
 
-    # --- keep this outside the loop so it persists between frames ---
-    current_ambient = AMBIENT_DEFAULT  # show something sensible at startup
+    # persistent values between frames
+    current_ambient = AMBIENT_DEFAULT
+    ticker_offset = 0
+    last_log = "ready"
+    warn_msg = ""  # set to something when needed
 
     while True:
         now = time.perf_counter()
@@ -369,17 +427,22 @@ def main():
             if ambient_c is None:
                 ambient_c = next_fake_temp(_fake_prev, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
             _fake_prev = ambient_c
-            current_ambient = ambient_c              # <-- update the persistent label value
-
-            # debug (optional)
-            # print(f"Ambient: {ambient_c:.2f} °C")
-
+            current_ambient = ambient_c
             graph_tick(ambient_c, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
             next_tick += TICK_S
 
+        # Compose ticker text
+        # You can append last_log / warnings dynamically later.
+        parts = [f"IP {ip_cache}", f"Ambient {current_ambient:0.1f}°C"]
+        if last_log:
+            parts.append(f"Log {last_log}")
+        if warn_msg:
+            parts.append(f"Warn {warn_msg}")
+        ticker_text = " | ".join(parts)
+
         # Order matches ICON_NAMES = ["fan","probe","pump","flow"]
         states = [FANS, PROBES, PUMPS, FLOW]
-        img = make_frame(frame_idx, ip_cache, states, current_ambient)  # <-- pass the persistent value
+        img, ticker_offset = make_frame(frame_idx, ip_cache, states, current_ambient, ticker_text, ticker_offset)
         device.display(img)
 
         frame_idx = (frame_idx + 1) % MAX_FRAMES
@@ -390,7 +453,6 @@ def main():
             time.sleep(sleep)
         else:
             next_t = time.perf_counter()
-
 
 if __name__ == "__main__":
     main()
