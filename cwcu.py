@@ -293,7 +293,7 @@ def draw_temp_grid(img, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT, current_
     img.paste(graph_img, (AX0, AY0))
     # Top-left: max (scale)
     max_txt = f"{int(tmax)}°C"
-    draw_label(img, max_txt, (AX0, AY0 + 1), LABEL_FG_TOP, LABEL_BG, LABEL_ALPHA)
+    draw_label(img, max_txt, (AX0, AY0), LABEL_FG_TOP, LABEL_BG, LABEL_ALPHA)
     # Bottom-left: show live ambient if provided; otherwise the scale min
     shown = current_ambient if (current_ambient is not None) else ambient
     amb_txt = f"{shown:0.1f}°C"
