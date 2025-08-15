@@ -242,7 +242,6 @@ def graph_tick(temp_value, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
         graph_img.paste(segment, (w - STEP_W, 0))
 
     draw = ImageDraw.Draw(graph_img)
-
     # draw horizontal grid lines in the new rightmost segment (under the bar)
     seg_x0 = w - STEP_W
     seg_x1 = w - 2  # leave last col for vertical grid
@@ -283,16 +282,18 @@ def draw_label(img, text, pos_xy, fg, bg, alpha):
     ld.text((pad_x, pad_y), text, fill=fg, font=font)
     img.paste(label, (tx, ty), label)
 
-def draw_temp_grid(img, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
+def draw_temp_grid(img, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT, current_ambient=None):
     """Paste the scrolling grid; draw only two labels on the LEFT (top=max, bottom=ambient) with translucent bg."""
     img.paste(graph_img, (AX0, AY0))
     # Top-left: max
     max_txt = f"{int(tmax)}°C"
     draw_label(img, max_txt, (AX0, AY0 + 1), LABEL_FG_TOP, LABEL_BG, LABEL_ALPHA)
-    # Bottom-left: ambient
-    amb_txt = f"{int(ambient)}°C"
+    # Bottom-left: show live ambient if provided; otherwise the scale min
+    shown = current_ambient if (current_ambient is not None) else ambient
+    amb_txt = f"{shown:0.1f}°C"
     amb_y = AY1 - (font.getbbox('Ay')[3] - font.getbbox('Ay')[1]) - 1
     draw_label(img, amb_txt, (AX0, amb_y), LABEL_FG_BOTTOM, LABEL_BG, LABEL_ALPHA)
+    print(f"Ambient: {ambient_c:.2f} °C")  # inside the tick block, after read_ambient_c()
 # =======================================
 
 # ---- fake live temp source ----
@@ -314,7 +315,7 @@ def next_fake_temp(prev, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
     val = max(ambient, min(tmax, val))
     return val
 
-def make_frame(frame_idx, ip_text, states):
+def make_frame(frame_idx, ip_text, states, current_ambient=None):
     img = bg.copy()
     draw = ImageDraw.Draw(img)
 
@@ -335,7 +336,7 @@ def make_frame(frame_idx, ip_text, states):
         draw.text((mb["text_x"], mb["text_y"] + 7), "Signal", fill='black', font=font)
 
     # scrolling temp grid + left labels
-    draw_temp_grid(img, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
+    draw_temp_grid(img, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT, current_ambient)
 
     # IP in bottom white bar
     draw.text((2, 86), ip_text, fill='black', font=font)
@@ -359,7 +360,8 @@ def main():
         if now >= ip_next:
             ip_cache = get_ip_fast()
             ip_next = now + IP_REFRESH_S
-
+            
+        last_ambient = None
         # advance the grid one step every TICK_S with fake live temp
         if now >= next_tick:
             # Try real ambient; if missing, fall back to the fake generator
@@ -367,13 +369,14 @@ def main():
             if ambient_c is None:
                 ambient_c = next_fake_temp(_fake_prev, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
             _fake_prev = ambient_c  # keep EMA state evolving
-            AMBIENT_DEFAULT = ambient_c
+            last_ambient = ambient_c
+            
             graph_tick(ambient_c, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
             next_tick += TICK_S
 
         # Order matches ICON_NAMES = ["fan","probe","pump","flow"]
         states = [FANS, PROBES, PUMPS, FLOW]
-        img = make_frame(frame_idx, ip_cache, states)
+        img = make_frame(frame_idx, ip_cache, states, last_ambient)
         device.display(img)
 
         frame_idx = (frame_idx + 1) % MAX_FRAMES
