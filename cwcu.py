@@ -8,6 +8,10 @@ from PIL import Image, ImageDraw, ImageFont, ImageChops
 from luma.core.interface.serial import spi
 from luma.oled.device import ssd1351  # use ssd1331 if your board is that controller
 
+# --- DS18B20 ambient probe ---
+AMBIENT_SENSOR_ID = None  # set to '28-xxxxxxxxxxxx' to lock to a specific device, or leave None to auto-pick the first 28-*
+W1_DEVICES_GLOB = "/sys/bus/w1/devices/28-*/w1_slave"
+
 # ================== CONFIG ==================
 WIDTH, HEIGHT = 128, 96
 SPI_HZ = 24_000_000
@@ -202,6 +206,29 @@ def draw_h_grid_segment(draw, x0, x1, h):
     """Draw horizontal grid lines only in [x0,x1], so lines appear under new content after scroll."""
     for y in range(0, h, H_GRID_STEP):
         draw.line((x0, y, x1, y), fill=GRID_COLOR_H)
+        
+def _read_ds18b20_file(path):
+    try:
+        with open(path, "r") as f:
+            data = f.read()
+        if "YES" not in data:
+            return None
+        t_eq = data.strip().split("t=")[-1]
+        return float(t_eq) / 1000.0
+    except Exception:
+        return None
+
+def read_ambient_c():
+    """Read the ambient DS18B20 in °C. Returns float or None."""
+    if AMBIENT_SENSOR_ID:
+        path = f"/sys/bus/w1/devices/{AMBIENT_SENSOR_ID}/w1_slave"
+        return _read_ds18b20_file(path)
+    # auto-pick first 28-* device
+    for path in sorted(glob.glob(W1_DEVICES_GLOB)):
+        c = _read_ds18b20_file(path)
+        if c is not None:
+            return c
+    return None
 
 def graph_tick(temp_value, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
     """Advance the grid one step: scroll left by STEP_W, add 2px bar + 1px vertical grid at right, with horiz lines."""
@@ -335,8 +362,12 @@ def main():
 
         # advance the grid one step every TICK_S with fake live temp
         if now >= next_tick:
-            _fake_prev = next_fake_temp(_fake_prev, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
-            graph_tick(_fake_prev, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
+            # Try real ambient; if missing, fall back to the fake generator
+            ambient_c = read_ambient_c()
+            if ambient_c is None:
+                ambient_c = next_fake_temp(_fake_prev, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
+            _fake_prev = ambient_c  # keep EMA state evolving        
+            graph_tick(ambient_c, AMBIENT_DEFAULT, TEMP_MAX_DEFAULT)
             next_tick += TICK_S
 
         # Order matches ICON_NAMES = ["fan","probe","pump","flow"]
