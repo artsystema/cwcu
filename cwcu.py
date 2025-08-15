@@ -341,7 +341,7 @@ def draw_bottom_bar(img, label, ticker_text, offset_px):
     if x + tw < bar_w:
         bd.text((x + tw + TICKER_SPACER_PX - 1, y), ticker_text, fill="white", font=font)
 
-    bd.rectangle((x0, y0, label_w + 6, y1), fill=" whit ")
+    bd.rectangle((x0, y0, label_w + 6, y1), fill=" white")
     bd.text((2, label_y - 1), label, fill="black", font=font)
     # paste back to main image
     img.paste(bar, (x0, y0))
