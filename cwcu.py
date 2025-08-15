@@ -310,47 +310,62 @@ def _text_width(draw, text, font):
         return bbox[2] - bbox[0]
 
 def draw_bottom_bar(img, label, ticker_text, offset_px):
+    # Base rect (we'll expand it horizontally by 2px total)
     x0, y0, x1, y1 = BOTTOM_BAR_RECT
-    bar_w = x1 - x0
-    bar_h = y1 - y0 + 3
 
-    # draw onto an off-screen buffer to clip cleanly
+    # Expand width by 2px total (1 left, 1 right) within screen bounds
+    expand = 2
+    left  = max(0, x0 - expand // 2)
+    right = min(WIDTH - 1, x1 + (expand - expand // 2))
+
+    bar_w = right - left + 1
+    bar_h = (y1 - y0 + 1)
+
+    # Off-screen buffer for clean clipping
     bar = Image.new("RGB", (bar_w, bar_h), "white")
     bd = ImageDraw.Draw(bar)
 
-    # label at left
-    label_y = max(0, (bar_h - (font.getbbox('Ay')[3] - font.getbbox('Ay')[1])) // 2 - 1)
-    
-    label_w = _text_width(bd, label, font) + 6  # include padding
+    # --- Label block (left) ---
+    # generous padding so it never looks cropped
+    pad_left, pad_right = 4, 4
+    # text vertical centering
+    mh = font.getbbox('Ay')
+    text_h = mh[3] - mh[1]
+    label_y = max(0, (bar_h - text_h) // 2 - 1)
 
-    # ticker area starts after label
-    ticker_x0 = label_w
-    ticker_w = max(0, bar_w - ticker_x0 + 12)
+    label_text_w = _text_width(bd, label, font)
+    label_block_w = label_text_w + pad_left + pad_right
 
-    # compose ticker string and measure
+    # Draw label text on white bg (bg already white)
+    bd.text((pad_left, label_y), label, fill="black", font=font)
+
+    # --- Separator (1 px black) ---
+    sep_x = label_block_w
+    if sep_x < bar_w:
+        bd.line((sep_x, 0, sep_x, bar_h - 1), fill="black")
+
+    # --- Ticker area (right) ---
+    # Black background fill to the right of the separator
+    tick_x0 = min(bar_w - 1, sep_x + 1)
+    if tick_x0 < bar_w:
+        bd.rectangle((tick_x0, 0, bar_w - 1, bar_h - 1), fill="black")
+
+    # Scrolling text: two copies for seamless wrap
     tw = _text_width(bd, ticker_text, font)
-
-    # draw scrolling text (two copies for seamless wrap)
-    x = ticker_x0 - offset_px
+    x = tick_x0 + 2 - offset_px   # small inset from separator
     y = label_y
-    
-    bd.rectangle((x + 20, y + 1, x1, y1), fill="black")
-    
-    bd.text((x - 1, y), ticker_text, fill="white", font=font)
-    # secondary copy if first has scrolled enough
+
+    bd.text((x, y), ticker_text, fill="white", font=font)
     if x + tw < bar_w:
-        bd.text((x + tw + TICKER_SPACER_PX - 1, y), ticker_text, fill="white", font=font)
+        bd.text((x + tw + TICKER_SPACER_PX, y), ticker_text, fill="white", font=font)
 
-    bd.rectangle((0, label_y - 3, label_w + 3, 8), fill="white")
-    bd.text((3, label_y - 1), label, fill="black", font=font)
-    # paste back to main image
-    img.paste(bar, (x0, y0))
+    # Paste back within the (expanded) region
+    img.paste(bar, (left, y0))
 
-    # return updated offset modulo cycle
-    cycle = tw + TICKER_SPACER_PX
-    if cycle <= 0:
-        return 0
+    # Advance ticker offset
+    cycle = max(1, tw + TICKER_SPACER_PX)
     return (offset_px + TICKER_SPEED_PX) % cycle
+
 
 # =======================================
 
