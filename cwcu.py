@@ -193,13 +193,13 @@ def temp_to_color_bgr(temp, ambient=AMBIENT_DEFAULT, tmax=TEMP_MAX_DEFAULT):
     # blue -> green -> yellow -> red (correct order)
     if t <= 1/3:
         u = t / (1/3)
-        c0, c1 = BAR_BLUE, BAR_GREEN
+        c0, c1 = BAR_RED, BAR_YELLOW
     elif t <= 2/3:
         u = (t - 1/3) / (1/3)
-        c0, c1 = BAR_GREEN, BAR_YELLOW
+        c0, c1 = BAR_YELLOW , BAR_GREEN
     else:
         u = (t - 2/3) / (1/3)
-        c0, c1 = BAR_YELLOW, BAR_RED
+        c0, c1 = BAR_GREEN, BAR_BLUE
 
     # lerp per B,G,R channel (still BGR here)
     b = lerp(c0[0], c1[0], u)
