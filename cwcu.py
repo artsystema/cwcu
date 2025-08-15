@@ -315,7 +315,7 @@ def draw_bottom_bar(img, label, ticker_text, offset_px):
     bar_h = y1 - y0 + 3
 
     # draw onto an off-screen buffer to clip cleanly
-    bar = Image.new("RGB", (bar_w, bar_h), "white")
+    bar = Image.new("RGB", (bar_w, bar_h), "black")
     bd = ImageDraw.Draw(bar)
 
     # label at left
