@@ -35,7 +35,7 @@ GRID_COLOR_H = (30, 30, 30)  # horizontal grid lines (RGB—neutral gray)
 H_GRID_STEP = 3            # px between horizontal grid lines
 
 # Bottom bar / ticker
-BOTTOM_BAR_RECT = (1, 87, 122, 94)  # x0,y0,x1,y1 (inclusive)
+BOTTOM_BAR_RECT = (1, 87, 122, 96)  # x0,y0,x1,y1 (inclusive)
 BOTTOM_LABEL = " Temp."               # or "Loop"
 TICKER_SPACER_PX = 24               # gap between repeats in pixels
 TICKER_SPEED_PX = 1                 # pixels per frame
