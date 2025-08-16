@@ -42,9 +42,9 @@ TICKER_SPEED_PX = 1                 # pixels per frame
 
 # Label look (left side of grid)
 LABEL_FG_TOP = (230, 230, 230)
-LABEL_FG_BOTTOM = (170, 170, 170)
+LABEL_FG_BOTTOM = (255, 255, 255)
 LABEL_BG = (0, 0, 0)      # semi-transparent bg color
-LABEL_ALPHA = 140         # 0..255 transparency
+LABEL_ALPHA = 150         # 0..255 transparency
 LABEL_PAD = (3, 1)        # x, y padding inside label box
 # ============================================
 
